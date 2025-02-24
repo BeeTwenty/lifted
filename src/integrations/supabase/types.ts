@@ -9,6 +9,33 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      exercise_templates: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          media_url: string
+          name: string
+          target_muscle: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          media_url: string
+          name: string
+          target_muscle: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          media_url?: string
+          name?: string
+          target_muscle?: string
+        }
+        Relationships: []
+      }
       exercises: {
         Row: {
           id: string

@@ -1,12 +1,13 @@
 
-import { Button } from "@/components/ui/button";
 import { WorkoutCard } from "@/components/WorkoutCard";
 import { WorkoutStats } from "@/components/WorkoutStats";
-import { Dumbbell, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { CreateWorkoutDialog } from "@/components/CreateWorkoutDialog";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -65,10 +66,7 @@ const Index = () => {
             <p className="text-gray-500 mt-2">Track your fitness journey</p>
           </div>
           <div className="flex gap-2">
-            <Button className="bg-accent hover:bg-accent/90">
-              <Dumbbell className="mr-2 h-4 w-4" />
-              New Workout
-            </Button>
+            <CreateWorkoutDialog />
             <Button variant="outline" onClick={handleSignOut}>
               <LogOut className="mr-2 h-4 w-4" />
               Sign Out
