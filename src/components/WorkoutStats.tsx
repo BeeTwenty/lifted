@@ -17,10 +17,10 @@ export function WorkoutStats() {
         .select("*", { count: "exact" })
         .eq("user_id", user.id);
 
-      // Get total duration
+      // Get workouts with duration and id
       const { data: workouts } = await supabase
         .from("workouts")
-        .select("duration")
+        .select("id, duration")
         .eq("user_id", user.id);
       
       const totalHours = workouts?.reduce((acc, curr) => acc + (curr.duration / 60), 0) || 0;
