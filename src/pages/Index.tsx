@@ -1,11 +1,51 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import { Button } from "@/components/ui/button";
+import { WorkoutCard } from "@/components/WorkoutCard";
+import { WorkoutStats } from "@/components/WorkoutStats";
+import { Dumbbell } from "lucide-react";
 
 const Index = () => {
+  const recentWorkouts = [
+    { id: 1, title: "Full Body Workout", duration: "45 min", exercises: 8 },
+    { id: 2, title: "Upper Body Focus", duration: "30 min", exercises: 6 },
+    { id: 3, title: "Leg Day", duration: "40 min", exercises: 7 },
+  ];
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
+    <div className="min-h-screen bg-gray-50/50">
+      <div className="container py-8 space-y-8">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-fade-in">
+          <div>
+            <h1 className="text-4xl font-bold">Welcome back</h1>
+            <p className="text-gray-500 mt-2">Track your fitness journey</p>
+          </div>
+          <Button className="bg-accent hover:bg-accent/90">
+            <Dumbbell className="mr-2 h-4 w-4" />
+            New Workout
+          </Button>
+        </div>
+
+        {/* Stats Section */}
+        <section className="py-4">
+          <WorkoutStats />
+        </section>
+
+        {/* Recent Workouts */}
+        <section className="py-4">
+          <h2 className="text-2xl font-semibold mb-4">Recent Workouts</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {recentWorkouts.map((workout) => (
+              <WorkoutCard
+                key={workout.id}
+                title={workout.title}
+                duration={workout.duration}
+                exercises={workout.exercises}
+                onClick={() => console.log(`Clicked workout ${workout.id}`)}
+              />
+            ))}
+          </div>
+        </section>
       </div>
     </div>
   );
