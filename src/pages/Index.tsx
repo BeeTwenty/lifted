@@ -6,7 +6,7 @@ import { LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { CreateWorkoutDialog } from "@/components/CreateWorkoutDialog";
 import { WorkoutPlayer } from "@/components/WorkoutPlayer";
@@ -14,7 +14,30 @@ import { WorkoutPlayer } from "@/components/WorkoutPlayer";
 const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [activeWorkoutId, setActiveWorkoutId] = useState<string | null>(null);
+
+  // Fetch user profile
+  const { data: profile } = useQuery({
+    queryKey: ["userProfile"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not found");
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("full_name, username")
+        .eq("id", user.id)
+        .single();
+
+      if (error) throw error;
+      return {
+        fullName: data.full_name,
+        username: data.username,
+        email: user.email
+      };
+    },
+  });
 
   const { data: routines, isLoading } = useQuery({
     queryKey: ["routines"],
@@ -56,13 +79,42 @@ const Index = () => {
     }
   };
 
+  const handleDeleteWorkout = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("workouts")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Routine deleted",
+        description: "Your routine has been deleted successfully."
+      });
+
+      // Refresh the routines data
+      queryClient.invalidateQueries({ queryKey: ["routines"] });
+      queryClient.invalidateQueries({ queryKey: ["workoutStats"] });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error deleting routine",
+        description: error.message,
+      });
+    }
+  };
+
+  // Get the display name from profile
+  const displayName = profile?.fullName || profile?.username || profile?.email?.split('@')[0] || "there";
+
   return (
     <div className="min-h-screen bg-gray-50/50">
       <div className="container py-8 space-y-8">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-fade-in">
           <div>
-            <h1 className="text-4xl font-bold">Welcome back</h1>
+            <h1 className="text-4xl font-bold">Welcome back, {displayName}</h1>
             <p className="text-gray-500 mt-2">Track your fitness journey</p>
           </div>
           <div className="flex gap-2">
@@ -95,6 +147,7 @@ const Index = () => {
                   duration=""
                   exercises={routine.exercises}
                   onClick={() => setActiveWorkoutId(routine.id)}
+                  onDelete={() => handleDeleteWorkout(routine.id)}
                 />
               ))
             ) : (

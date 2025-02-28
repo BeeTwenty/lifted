@@ -11,21 +11,32 @@ export function WorkoutStats() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not found");
 
-      // Get total workouts
+      // Calculate the start of this week (Sunday)
+      const now = new Date();
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - now.getDay()); // Go back to Sunday
+      startOfWeek.setHours(0, 0, 0, 0); // Start of day
+      
+      // Format as ISO string for Supabase
+      const startOfWeekISO = startOfWeek.toISOString();
+
+      // Get total workouts for this week
       const { count: totalWorkouts } = await supabase
         .from("workouts")
         .select("*", { count: "exact" })
-        .eq("user_id", user.id);
+        .eq("user_id", user.id)
+        .gte("created_at", startOfWeekISO);
 
-      // Get workouts with duration and id
+      // Get workouts with duration and id for this week
       const { data: workouts } = await supabase
         .from("workouts")
         .select("id, duration")
-        .eq("user_id", user.id);
+        .eq("user_id", user.id)
+        .gte("created_at", startOfWeekISO);
       
       const totalHours = workouts?.reduce((acc, curr) => acc + (curr.duration / 60), 0) || 0;
 
-      // Get total exercises
+      // Get total exercises for this week's workouts
       const { count: totalExercises } = await supabase
         .from("exercises")
         .select("*", { count: "exact" })
@@ -47,7 +58,7 @@ export function WorkoutStats() {
             <Activity className="w-6 h-6 text-accent" />
           </div>
           <div>
-            <p className="text-sm text-gray-500">Total Workouts</p>
+            <p className="text-sm text-gray-500">Workouts This Week</p>
             <h4 className="text-2xl font-semibold">{stats?.totalWorkouts ?? "..."}</h4>
           </div>
         </div>
@@ -59,7 +70,7 @@ export function WorkoutStats() {
             <Timer className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <p className="text-sm text-gray-500">Hours Trained</p>
+            <p className="text-sm text-gray-500">Hours This Week</p>
             <h4 className="text-2xl font-semibold">{stats?.totalHours ?? "..."}</h4>
           </div>
         </div>
@@ -71,7 +82,7 @@ export function WorkoutStats() {
             <Dumbbell className="w-6 h-6 text-success" />
           </div>
           <div>
-            <p className="text-sm text-gray-500">Total Exercises</p>
+            <p className="text-sm text-gray-500">Exercises This Week</p>
             <h4 className="text-2xl font-semibold">{stats?.totalExercises ?? "..."}</h4>
           </div>
         </div>

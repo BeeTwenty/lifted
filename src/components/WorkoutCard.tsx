@@ -1,6 +1,6 @@
 
 import { Card } from "@/components/ui/card";
-import { Activity, Play } from "lucide-react";
+import { Activity, Play, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface WorkoutCardProps {
@@ -8,9 +8,10 @@ interface WorkoutCardProps {
   duration: string;
   exercises: number;
   onClick?: () => void;
+  onDelete?: () => void;
 }
 
-export function WorkoutCard({ title, duration, exercises, onClick }: WorkoutCardProps) {
+export function WorkoutCard({ title, duration, exercises, onClick, onDelete }: WorkoutCardProps) {
   return (
     <Card 
       className="p-6 hover:shadow-lg transition-shadow animate-fade-up"
@@ -25,10 +26,21 @@ export function WorkoutCard({ title, duration, exercises, onClick }: WorkoutCard
             </div>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={onClick}>
-          <Play size={16} className="mr-1" />
-          Start
-        </Button>
+        <div className="flex flex-col gap-2">
+          <Button variant="outline" size="sm" onClick={onClick}>
+            <Play size={16} className="mr-1" />
+            Start
+          </Button>
+          {onDelete && (
+            <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}>
+              <Trash2 size={16} className="mr-1" />
+              Delete
+            </Button>
+          )}
+        </div>
       </div>
     </Card>
   );

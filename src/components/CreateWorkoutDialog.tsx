@@ -7,7 +7,7 @@ import { ExerciseTemplateCard } from "./ExerciseTemplateCard";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Dumbbell } from "lucide-react";
+import { Dumbbell, Search } from "lucide-react";
 
 interface ExerciseTemplate {
   id: string;
@@ -28,6 +28,7 @@ export function CreateWorkoutDialog() {
   const { toast } = useToast();
   const [selectedExercises, setSelectedExercises] = useState<SelectedExercise[]>([]);
   const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { data: exerciseTemplates, isLoading } = useQuery({
     queryKey: ["exerciseTemplates"],
@@ -40,6 +41,17 @@ export function CreateWorkoutDialog() {
       if (error) throw error;
       return data as ExerciseTemplate[];
     },
+  });
+
+  const filteredExercises = exerciseTemplates?.filter(exercise => {
+    if (!searchQuery) return false; // Don't show anything if no search
+    
+    const lowerCaseSearch = searchQuery.toLowerCase();
+    return (
+      exercise.name.toLowerCase().includes(lowerCaseSearch) ||
+      exercise.target_muscle.toLowerCase().includes(lowerCaseSearch) ||
+      exercise.description.toLowerCase().includes(lowerCaseSearch)
+    );
   });
 
   const handleCreateWorkout = async () => {
@@ -77,17 +89,18 @@ export function CreateWorkoutDialog() {
       if (exercisesError) throw exercisesError;
 
       toast({
-        title: "Workout created",
+        title: "Routine created",
         description: "Your new workout routine has been created successfully.",
       });
 
       setTitle("");
       setSelectedExercises([]);
+      setSearchQuery("");
       setOpen(false);
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Error creating workout",
+        title: "Error creating routine",
         description: error.message,
       });
     }
@@ -98,17 +111,17 @@ export function CreateWorkoutDialog() {
       <DialogTrigger asChild>
         <Button className="bg-accent hover:bg-accent/90">
           <Dumbbell className="mr-2 h-4 w-4" />
-          New Workout
+          New Routine
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create New Workout</DialogTitle>
+          <DialogTitle>Create New Routine</DialogTitle>
         </DialogHeader>
         <div className="space-y-6">
           <div>
             <Input
-              placeholder="Workout Title (e.g., Upper Body, Leg Day)"
+              placeholder="Routine Title (e.g., Upper Body, Leg Day)"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
@@ -141,34 +154,54 @@ export function CreateWorkoutDialog() {
           )}
 
           <div className="space-y-2">
-            <h3 className="font-medium">Available Exercises</h3>
+            <h3 className="font-medium">Search For Exercises</h3>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search by name, muscle group, or description..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
             {isLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[1, 2, 3, 4].map((i) => (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                {[1, 2].map((i) => (
                   <div key={i} className="h-64 bg-muted animate-pulse rounded-lg" />
                 ))}
               </div>
+            ) : searchQuery ? (
+              filteredExercises && filteredExercises.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  {filteredExercises.map((template) => (
+                    <ExerciseTemplateCard
+                      key={template.id}
+                      name={template.name}
+                      description={template.description}
+                      mediaUrl={template.media_url}
+                      targetMuscle={template.target_muscle}
+                      onAdd={(sets, reps, weight) => {
+                        if (!selectedExercises.find(e => e.id === template.id)) {
+                          setSelectedExercises(prev => [...prev, {
+                            ...template,
+                            sets,
+                            reps,
+                            weight
+                          }]);
+                        }
+                      }}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500 mt-4">
+                  No exercises found matching "{searchQuery}". Try a different search.
+                </div>
+              )
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {exerciseTemplates?.map((template) => (
-                  <ExerciseTemplateCard
-                    key={template.id}
-                    name={template.name}
-                    description={template.description}
-                    mediaUrl={template.media_url}
-                    targetMuscle={template.target_muscle}
-                    onAdd={(sets, reps, weight) => {
-                      if (!selectedExercises.find(e => e.id === template.id)) {
-                        setSelectedExercises(prev => [...prev, {
-                          ...template,
-                          sets,
-                          reps,
-                          weight
-                        }]);
-                      }
-                    }}
-                  />
-                ))}
+              <div className="text-center py-8 text-gray-500 mt-4">
+                Enter a search term to find exercises
               </div>
             )}
           </div>
@@ -181,7 +214,7 @@ export function CreateWorkoutDialog() {
               onClick={handleCreateWorkout}
               disabled={!title || selectedExercises.length === 0}
             >
-              Create Workout
+              Create Routine
             </Button>
           </div>
         </div>
