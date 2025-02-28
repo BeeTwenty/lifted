@@ -1,11 +1,13 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Utensils, Plus, Trash2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 
 interface FoodItem {
   id: string;
@@ -25,6 +27,8 @@ interface NutritionSummary {
 
 export function FoodTracker({ dailyCalories }: { dailyCalories: number }) {
   const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
   const [newFood, setNewFood] = useState({
     name: "",
     calories: "",
@@ -33,30 +37,127 @@ export function FoodTracker({ dailyCalories }: { dailyCalories: number }) {
     fat: "",
   });
 
-  const addFoodItem = () => {
-    if (!newFood.name || !newFood.calories) return;
+  useEffect(() => {
+    fetchFoodLogs();
+  }, []);
 
-    const foodItem: FoodItem = {
-      id: Date.now().toString(),
-      name: newFood.name,
-      calories: parseFloat(newFood.calories),
-      protein: parseFloat(newFood.protein) || 0,
-      carbs: parseFloat(newFood.carbs) || 0,
-      fat: parseFloat(newFood.fat) || 0,
-    };
+  const fetchFoodLogs = async () => {
+    try {
+      setIsLoading(true);
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not found");
 
-    setFoodItems([...foodItems, foodItem]);
-    setNewFood({
-      name: "",
-      calories: "",
-      protein: "",
-      carbs: "",
-      fat: "",
-    });
+      // Get today's date in ISO format (YYYY-MM-DD)
+      const today = new Date().toISOString().split('T')[0];
+
+      // Fetch food logs for today
+      const { data, error } = await supabase
+        .from("food_logs")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("date", today);
+
+      if (error) throw error;
+
+      if (data) {
+        setFoodItems(data.map(item => ({
+          id: item.id,
+          name: item.name,
+          calories: item.calories,
+          protein: item.protein || 0,
+          carbs: item.carbs || 0,
+          fat: item.fat || 0,
+        })));
+      }
+    } catch (error: any) {
+      console.error("Error fetching food logs:", error);
+      toast({
+        variant: "destructive",
+        title: "Failed to load food data",
+        description: error.message,
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const removeFoodItem = (id: string) => {
-    setFoodItems(foodItems.filter(item => item.id !== id));
+  const addFoodItem = async () => {
+    try {
+      if (!newFood.name || !newFood.calories) return;
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not found");
+
+      const foodItem = {
+        user_id: user.id,
+        name: newFood.name,
+        calories: parseInt(newFood.calories),
+        protein: parseFloat(newFood.protein) || null,
+        carbs: parseFloat(newFood.carbs) || null,
+        fat: parseFloat(newFood.fat) || null,
+      };
+
+      const { data, error } = await supabase
+        .from("food_logs")
+        .insert(foodItem)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setFoodItems([...foodItems, {
+        id: data.id,
+        name: data.name,
+        calories: data.calories,
+        protein: data.protein || 0,
+        carbs: data.carbs || 0,
+        fat: data.fat || 0,
+      }]);
+
+      setNewFood({
+        name: "",
+        calories: "",
+        protein: "",
+        carbs: "",
+        fat: "",
+      });
+
+      toast({
+        title: "Food added",
+        description: `${foodItem.name} has been added to your food log.`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error adding food",
+        description: error.message,
+      });
+    }
+  };
+
+  const removeFoodItem = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("food_logs")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setFoodItems(foodItems.filter(item => item.id !== id));
+      
+      toast({
+        title: "Food removed",
+        description: "Item has been removed from your food log.",
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error removing food",
+        description: error.message,
+      });
+    }
   };
 
   const calculateNutrition = (): NutritionSummary => {
@@ -119,7 +220,13 @@ export function FoodTracker({ dailyCalories }: { dailyCalories: number }) {
         {/* Food Log */}
         <div className="space-y-2">
           <h3 className="text-sm font-medium">Today's Food</h3>
-          {foodItems.length === 0 ? (
+          {isLoading ? (
+            <div className="space-y-2">
+              {[1, 2].map((i) => (
+                <div key={i} className="h-16 bg-gray-100 animate-pulse rounded" />
+              ))}
+            </div>
+          ) : foodItems.length === 0 ? (
             <div className="text-center text-sm text-gray-500 py-4">
               No food items tracked yet
             </div>

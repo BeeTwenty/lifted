@@ -74,9 +74,54 @@ export type Database = {
           },
         ]
       }
+      food_logs: {
+        Row: {
+          calories: number
+          carbs: number | null
+          created_at: string | null
+          date: string | null
+          fat: number | null
+          id: string
+          name: string
+          protein: number | null
+          user_id: string
+        }
+        Insert: {
+          calories: number
+          carbs?: number | null
+          created_at?: string | null
+          date?: string | null
+          fat?: number | null
+          id?: string
+          name: string
+          protein?: number | null
+          user_id: string
+        }
+        Update: {
+          calories?: number
+          carbs?: number | null
+          created_at?: string | null
+          date?: string | null
+          fat?: number | null
+          id?: string
+          name?: string
+          protein?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "food_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
+          daily_calories: number | null
           full_name: string | null
           id: string
           updated_at: string
@@ -84,6 +129,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          daily_calories?: number | null
           full_name?: string | null
           id: string
           updated_at?: string
@@ -91,6 +137,7 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          daily_calories?: number | null
           full_name?: string | null
           id?: string
           updated_at?: string

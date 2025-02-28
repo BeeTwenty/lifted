@@ -45,9 +45,23 @@ const Index = () => {
         setDailyCalories(data.daily_calories);
       }
 
-      // For this example, we'll set consumed calories to a random value
-      // In a real app, you'd fetch the actual tracked food for the day
-      setConsumedCalories(Math.floor(Math.random() * data.daily_calories));
+      // Get today's date in ISO format (YYYY-MM-DD)
+      const today = new Date().toISOString().split('T')[0];
+
+      // Get consumed calories for today
+      const { data: foodLogs, error: foodError } = await supabase
+        .from("food_logs")
+        .select("calories")
+        .eq("user_id", user.id)
+        .eq("date", today);
+
+      if (foodError) {
+        console.error("Error fetching food logs:", foodError);
+        return;
+      }
+
+      const totalCalories = foodLogs?.reduce((sum, item) => sum + item.calories, 0) || 0;
+      setConsumedCalories(totalCalories);
     } catch (error) {
       console.error("Error fetching nutrition data:", error);
     }
