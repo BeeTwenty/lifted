@@ -16,8 +16,8 @@ const Index = () => {
   const { toast } = useToast();
   const [activeWorkoutId, setActiveWorkoutId] = useState<string | null>(null);
 
-  const { data: recentWorkouts, isLoading } = useQuery({
-    queryKey: ["recentWorkouts"],
+  const { data: routines, isLoading } = useQuery({
+    queryKey: ["routines"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not found");
@@ -27,19 +27,16 @@ const Index = () => {
         .select(`
           id,
           title,
-          duration,
           exercises (count)
         `)
         .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(3);
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
 
       return workouts.map(workout => ({
         id: workout.id,
         title: workout.title,
-        duration: `${workout.duration} min`,
         exercises: workout.exercises[0].count,
       }));
     },
@@ -82,27 +79,27 @@ const Index = () => {
           <WorkoutStats />
         </section>
 
-        {/* Recent Workouts */}
+        {/* Routines Section */}
         <section className="py-4">
-          <h2 className="text-2xl font-semibold mb-4">Recent Workouts</h2>
+          <h2 className="text-2xl font-semibold mb-4">Routines</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {isLoading ? (
               Array(3).fill(0).map((_, i) => (
                 <div key={i} className="h-32 bg-gray-100 animate-pulse rounded-lg" />
               ))
-            ) : recentWorkouts?.length ? (
-              recentWorkouts.map((workout) => (
+            ) : routines?.length ? (
+              routines.map((routine) => (
                 <WorkoutCard
-                  key={workout.id}
-                  title={workout.title}
-                  duration={workout.duration}
-                  exercises={workout.exercises}
-                  onClick={() => setActiveWorkoutId(workout.id)}
+                  key={routine.id}
+                  title={routine.title}
+                  duration=""
+                  exercises={routine.exercises}
+                  onClick={() => setActiveWorkoutId(routine.id)}
                 />
               ))
             ) : (
               <div className="col-span-full text-center py-8 text-gray-500">
-                No workouts yet. Start by creating your first workout!
+                No routines yet. Start by creating your first workout routine!
               </div>
             )}
           </div>

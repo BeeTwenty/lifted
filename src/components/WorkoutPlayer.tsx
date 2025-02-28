@@ -4,7 +4,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Save } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 interface Exercise {
   id: string;
@@ -26,6 +27,10 @@ export function WorkoutPlayer({ workoutId, onClose }: WorkoutPlayerProps) {
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [exerciseMedia, setExerciseMedia] = useState<string | null>(null);
+  const [editedSets, setEditedSets] = useState<number>(0);
+  const [editedReps, setEditedReps] = useState<number>(0);
+  const [editedWeight, setEditedWeight] = useState<number | null>(null);
+  const [isSaving, setSaving] = useState(false);
   const { toast } = useToast();
 
   const currentExercise = exercises[currentExerciseIndex];
@@ -35,6 +40,14 @@ export function WorkoutPlayer({ workoutId, onClose }: WorkoutPlayerProps) {
       fetchWorkoutDetails();
     }
   }, [workoutId]);
+
+  useEffect(() => {
+    if (currentExercise) {
+      setEditedSets(currentExercise.sets);
+      setEditedReps(currentExercise.reps);
+      setEditedWeight(currentExercise.weight);
+    }
+  }, [currentExercise]);
 
   const fetchWorkoutDetails = async () => {
     try {
@@ -92,16 +105,71 @@ export function WorkoutPlayer({ workoutId, onClose }: WorkoutPlayerProps) {
 
   const handleNext = () => {
     if (currentExerciseIndex < exercises.length - 1) {
-      setCurrentExerciseIndex(prev => prev + 1);
-      fetchExerciseMedia(exercises[currentExerciseIndex + 1].name);
+      saveCurrentExerciseChanges().then(() => {
+        setCurrentExerciseIndex(prev => prev + 1);
+        fetchExerciseMedia(exercises[currentExerciseIndex + 1].name);
+      });
     }
   };
 
   const handlePrevious = () => {
     if (currentExerciseIndex > 0) {
-      setCurrentExerciseIndex(prev => prev - 1);
-      fetchExerciseMedia(exercises[currentExerciseIndex - 1].name);
+      saveCurrentExerciseChanges().then(() => {
+        setCurrentExerciseIndex(prev => prev - 1);
+        fetchExerciseMedia(exercises[currentExerciseIndex - 1].name);
+      });
     }
+  };
+
+  const saveCurrentExerciseChanges = async () => {
+    if (!currentExercise) return Promise.resolve();
+    
+    // Only save if values have changed
+    if (
+      editedSets !== currentExercise.sets ||
+      editedReps !== currentExercise.reps ||
+      editedWeight !== currentExercise.weight
+    ) {
+      setSaving(true);
+      try {
+        const { error } = await supabase
+          .from("exercises")
+          .update({
+            sets: editedSets,
+            reps: editedReps,
+            weight: editedWeight
+          })
+          .eq("id", currentExercise.id);
+        
+        if (error) throw error;
+        
+        // Update local state
+        setExercises(exercises.map(ex => 
+          ex.id === currentExercise.id 
+            ? { ...ex, sets: editedSets, reps: editedReps, weight: editedWeight } 
+            : ex
+        ));
+        
+        toast({
+          title: "Exercise updated",
+          description: "Your changes have been saved.",
+        });
+      } catch (error: any) {
+        toast({
+          variant: "destructive",
+          title: "Error saving changes",
+          description: error.message,
+        });
+      } finally {
+        setSaving(false);
+      }
+    }
+    
+    return Promise.resolve();
+  };
+
+  const handleSave = () => {
+    saveCurrentExerciseChanges();
   };
 
   if (!workoutId) return null;
@@ -147,23 +215,52 @@ export function WorkoutPlayer({ workoutId, onClose }: WorkoutPlayerProps) {
               <h2 className="text-2xl font-bold">{currentExercise.name}</h2>
               
               <div className="grid grid-cols-3 gap-4">
-                <div className="bg-muted p-4 rounded-lg text-center">
-                  <div className="text-3xl font-bold">{currentExercise.sets}</div>
-                  <div className="text-sm text-muted-foreground">Sets</div>
+                <div className="space-y-1">
+                  <label htmlFor="edit-sets" className="text-sm font-medium">Sets</label>
+                  <Input
+                    id="edit-sets"
+                    type="number"
+                    value={editedSets}
+                    min={1}
+                    onChange={(e) => setEditedSets(parseInt(e.target.value) || 1)}
+                    className="w-full"
+                  />
                 </div>
                 
-                <div className="bg-muted p-4 rounded-lg text-center">
-                  <div className="text-3xl font-bold">{currentExercise.reps}</div>
-                  <div className="text-sm text-muted-foreground">Reps</div>
+                <div className="space-y-1">
+                  <label htmlFor="edit-reps" className="text-sm font-medium">Reps</label>
+                  <Input
+                    id="edit-reps"
+                    type="number"
+                    value={editedReps}
+                    min={1}
+                    onChange={(e) => setEditedReps(parseInt(e.target.value) || 1)}
+                    className="w-full"
+                  />
                 </div>
                 
-                <div className="bg-muted p-4 rounded-lg text-center">
-                  <div className="text-3xl font-bold">
-                    {currentExercise.weight || "—"}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Weight (kg)</div>
+                <div className="space-y-1">
+                  <label htmlFor="edit-weight" className="text-sm font-medium">Weight (kg)</label>
+                  <Input
+                    id="edit-weight"
+                    type="number"
+                    value={editedWeight || ""}
+                    min={0}
+                    placeholder="Optional"
+                    onChange={(e) => setEditedWeight(e.target.value ? parseFloat(e.target.value) : null)}
+                    className="w-full"
+                  />
                 </div>
               </div>
+              
+              <Button 
+                className="w-full" 
+                onClick={handleSave}
+                disabled={isSaving}
+              >
+                <Save className="mr-2 h-4 w-4" />
+                Save Changes
+              </Button>
               
               {currentExercise.notes && (
                 <div className="bg-muted/50 p-4 rounded-lg">
