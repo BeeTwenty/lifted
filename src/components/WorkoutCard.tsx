@@ -1,6 +1,7 @@
 
 import { Card } from "@/components/ui/card";
-import { Activity, Timer } from "lucide-react";
+import { Activity, Timer, Play } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface WorkoutCardProps {
   title: string;
@@ -12,8 +13,7 @@ interface WorkoutCardProps {
 export function WorkoutCard({ title, duration, exercises, onClick }: WorkoutCardProps) {
   return (
     <Card 
-      onClick={onClick}
-      className="p-6 hover:shadow-lg transition-shadow cursor-pointer animate-fade-up"
+      className="p-6 hover:shadow-lg transition-shadow animate-fade-up"
     >
       <div className="flex items-start justify-between">
         <div className="space-y-2">
@@ -29,6 +29,10 @@ export function WorkoutCard({ title, duration, exercises, onClick }: WorkoutCard
             </div>
           </div>
         </div>
+        <Button variant="outline" size="sm" onClick={onClick}>
+          <Play size={16} className="mr-1" />
+          Start
+        </Button>
       </div>
     </Card>
   );

@@ -17,10 +17,17 @@ interface ExerciseTemplate {
   target_muscle: string;
 }
 
+interface SelectedExercise extends ExerciseTemplate {
+  sets: number;
+  reps: number;
+  weight: number | null;
+}
+
 export function CreateWorkoutDialog() {
   const [title, setTitle] = useState("");
   const { toast } = useToast();
-  const [selectedExercises, setSelectedExercises] = useState<ExerciseTemplate[]>([]);
+  const [selectedExercises, setSelectedExercises] = useState<SelectedExercise[]>([]);
+  const [open, setOpen] = useState(false);
 
   const { data: exerciseTemplates, isLoading } = useQuery({
     queryKey: ["exerciseTemplates"],
@@ -53,13 +60,14 @@ export function CreateWorkoutDialog() {
 
       if (workoutError) throw workoutError;
 
-      // Add exercises to workout
-      const exercisesData = selectedExercises.map(template => ({
+      // Add exercises to workout with customized sets, reps, and weight
+      const exercisesData = selectedExercises.map(exercise => ({
         workout_id: workout.id,
-        name: template.name,
-        sets: 3, // Default values
-        reps: 10,
-        notes: template.description,
+        name: exercise.name,
+        sets: exercise.sets,
+        reps: exercise.reps,
+        weight: exercise.weight,
+        notes: exercise.description,
       }));
 
       const { error: exercisesError } = await supabase
@@ -75,6 +83,7 @@ export function CreateWorkoutDialog() {
 
       setTitle("");
       setSelectedExercises([]);
+      setOpen(false);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -85,7 +94,7 @@ export function CreateWorkoutDialog() {
   };
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button className="bg-accent hover:bg-accent/90">
           <Dumbbell className="mr-2 h-4 w-4" />
@@ -99,7 +108,7 @@ export function CreateWorkoutDialog() {
         <div className="space-y-6">
           <div>
             <Input
-              placeholder="Workout Title"
+              placeholder="Workout Title (e.g., Upper Body, Leg Day)"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
@@ -108,10 +117,16 @@ export function CreateWorkoutDialog() {
           {selectedExercises.length > 0 && (
             <div className="space-y-2">
               <h3 className="font-medium">Selected Exercises</h3>
-              <div className="space-y-1">
+              <div className="space-y-2">
                 {selectedExercises.map((exercise) => (
-                  <div key={exercise.id} className="flex justify-between items-center p-2 bg-muted rounded-md">
-                    <span>{exercise.name}</span>
+                  <div key={exercise.id} className="flex justify-between items-center p-3 bg-muted rounded-md">
+                    <div>
+                      <span className="font-medium">{exercise.name}</span>
+                      <div className="text-sm text-muted-foreground">
+                        {exercise.sets} sets × {exercise.reps} reps
+                        {exercise.weight ? ` × ${exercise.weight}kg` : ''}
+                      </div>
+                    </div>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -142,9 +157,14 @@ export function CreateWorkoutDialog() {
                     description={template.description}
                     mediaUrl={template.media_url}
                     targetMuscle={template.target_muscle}
-                    onAdd={() => {
+                    onAdd={(sets, reps, weight) => {
                       if (!selectedExercises.find(e => e.id === template.id)) {
-                        setSelectedExercises(prev => [...prev, template]);
+                        setSelectedExercises(prev => [...prev, {
+                          ...template,
+                          sets,
+                          reps,
+                          weight
+                        }]);
                       }
                     }}
                   />
@@ -154,9 +174,9 @@ export function CreateWorkoutDialog() {
           </div>
 
           <div className="flex justify-end gap-2">
-            <DialogTrigger asChild>
-              <Button variant="outline">Cancel</Button>
-            </DialogTrigger>
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
             <Button 
               onClick={handleCreateWorkout}
               disabled={!title || selectedExercises.length === 0}

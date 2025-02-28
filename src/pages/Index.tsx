@@ -1,4 +1,5 @@
 
+import { useState } from "react";
 import { WorkoutCard } from "@/components/WorkoutCard";
 import { WorkoutStats } from "@/components/WorkoutStats";
 import { LogOut } from "lucide-react";
@@ -8,10 +9,12 @@ import { useToast } from "@/components/ui/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { CreateWorkoutDialog } from "@/components/CreateWorkoutDialog";
+import { WorkoutPlayer } from "@/components/WorkoutPlayer";
 
 const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [activeWorkoutId, setActiveWorkoutId] = useState<string | null>(null);
 
   const { data: recentWorkouts, isLoading } = useQuery({
     queryKey: ["recentWorkouts"],
@@ -94,7 +97,7 @@ const Index = () => {
                   title={workout.title}
                   duration={workout.duration}
                   exercises={workout.exercises}
-                  onClick={() => console.log(`Clicked workout ${workout.id}`)}
+                  onClick={() => setActiveWorkoutId(workout.id)}
                 />
               ))
             ) : (
@@ -104,6 +107,12 @@ const Index = () => {
             )}
           </div>
         </section>
+
+        {/* Workout Player */}
+        <WorkoutPlayer 
+          workoutId={activeWorkoutId} 
+          onClose={() => setActiveWorkoutId(null)} 
+        />
       </div>
     </div>
   );
