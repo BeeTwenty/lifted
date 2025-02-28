@@ -1,21 +1,57 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { WorkoutCard } from "@/components/WorkoutCard";
 import { WorkoutStats } from "@/components/WorkoutStats";
-import { LogOut } from "lucide-react";
+import { LogOut, UtensilsCrossed } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { CreateWorkoutDialog } from "@/components/CreateWorkoutDialog";
 import { WorkoutPlayer } from "@/components/WorkoutPlayer";
+import { NutritionStat } from "@/components/NutritionStat";
 
 const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeWorkoutId, setActiveWorkoutId] = useState<string | null>(null);
+  const [dailyCalories, setDailyCalories] = useState<number>(2000);
+  const [consumedCalories, setConsumedCalories] = useState<number>(0);
+
+  useEffect(() => {
+    fetchNutritionData();
+  }, []);
+
+  const fetchNutritionData = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get user's saved calorie target if it exists
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("daily_calories")
+        .eq("id", user.id)
+        .single();
+
+      if (error && error.code !== "PGRST116") {
+        console.error("Error fetching nutrition data:", error);
+        return;
+      }
+      
+      if (data && data.daily_calories) {
+        setDailyCalories(data.daily_calories);
+      }
+
+      // For this example, we'll set consumed calories to a random value
+      // In a real app, you'd fetch the actual tracked food for the day
+      setConsumedCalories(Math.floor(Math.random() * data.daily_calories));
+    } catch (error) {
+      console.error("Error fetching nutrition data:", error);
+    }
+  };
 
   // Fetch user profile
   const { data: profile } = useQuery({
@@ -118,6 +154,12 @@ const Index = () => {
             <p className="text-gray-500 mt-2">Track your fitness journey</p>
           </div>
           <div className="flex gap-2">
+            <Link to="/nutrition">
+              <Button variant="outline" className="bg-primary/5">
+                <UtensilsCrossed className="mr-2 h-4 w-4" />
+                Nutrition Tracker
+              </Button>
+            </Link>
             <CreateWorkoutDialog />
             <Button variant="outline" onClick={handleSignOut}>
               <LogOut className="mr-2 h-4 w-4" />
@@ -128,7 +170,17 @@ const Index = () => {
 
         {/* Stats Section */}
         <section className="py-4">
-          <WorkoutStats />
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 animate-fade-up">
+            <div className="md:col-span-3">
+              <WorkoutStats />
+            </div>
+            <div className="md:col-span-1">
+              <NutritionStat
+                dailyCalories={dailyCalories}
+                consumedCalories={consumedCalories}
+              />
+            </div>
+          </div>
         </section>
 
         {/* Routines Section */}

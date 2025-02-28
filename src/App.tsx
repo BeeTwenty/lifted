@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import Nutrition from "./pages/Nutrition";
 import { AuthProvider, useAuth } from "./components/AuthProvider";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,14 @@ const AppRoutes = () => (
       element={
         <ProtectedRoute>
           <Index />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/nutrition"
+      element={
+        <ProtectedRoute>
+          <Nutrition />
         </ProtectedRoute>
       }
     />
