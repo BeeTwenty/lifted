@@ -7,7 +7,7 @@ import Auth from "@/pages/Auth";
 import Settings from "@/pages/Settings";
 import NotFound from "@/pages/NotFound";
 import Nutrition from "@/pages/Nutrition";
-import AuthProvider from "@/components/AuthProvider";
+import { AuthProvider } from "@/components/AuthProvider";
 
 // Create a client
 const queryClient = new QueryClient();
