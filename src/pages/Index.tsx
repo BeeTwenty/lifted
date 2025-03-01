@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from "react";
 import { WorkoutCard } from "@/components/WorkoutCard";
 import { WorkoutStats } from "@/components/WorkoutStats";
-import { LogOut, UtensilsCrossed } from "lucide-react";
+import { LogOut, UtensilsCrossed, Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate, Link } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
@@ -29,7 +28,6 @@ const Index = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get user's saved calorie target if it exists
       const { data, error } = await supabase
         .from("profiles")
         .select("daily_calories")
@@ -45,10 +43,8 @@ const Index = () => {
         setDailyCalories(data.daily_calories);
       }
 
-      // Get today's date in ISO format (YYYY-MM-DD)
       const today = new Date().toISOString().split('T')[0];
 
-      // Get consumed calories for today
       const { data: foodLogs, error: foodError } = await supabase
         .from("food_logs")
         .select("calories")
@@ -67,7 +63,6 @@ const Index = () => {
     }
   };
 
-  // Fetch user profile
   const { data: profile } = useQuery({
     queryKey: ["userProfile"],
     queryFn: async () => {
@@ -143,7 +138,6 @@ const Index = () => {
         description: "Your routine has been deleted successfully."
       });
 
-      // Refresh the routines data
       queryClient.invalidateQueries({ queryKey: ["routines"] });
       queryClient.invalidateQueries({ queryKey: ["workoutStats"] });
     } catch (error: any) {
@@ -155,13 +149,11 @@ const Index = () => {
     }
   };
 
-  // Get the display name from profile
   const displayName = profile?.fullName || profile?.username || profile?.email?.split('@')[0] || "there";
 
   return (
     <div className="min-h-screen bg-gray-50/50">
       <div className="container py-8 space-y-8">
-        {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-fade-in">
           <div>
             <h1 className="text-4xl font-bold">Welcome back, {displayName}</h1>
@@ -174,6 +166,12 @@ const Index = () => {
                 Nutrition Tracker
               </Button>
             </Link>
+            <Link to="/settings">
+              <Button variant="outline" className="bg-primary/5">
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </Button>
+            </Link>
             <CreateWorkoutDialog />
             <Button variant="outline" onClick={handleSignOut}>
               <LogOut className="mr-2 h-4 w-4" />
@@ -182,7 +180,6 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Stats Section */}
         <section className="py-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 animate-fade-up">
             <div className="md:col-span-3">
@@ -197,7 +194,6 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Routines Section */}
         <section className="py-4">
           <h2 className="text-2xl font-semibold mb-4">Routines</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -224,7 +220,6 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Workout Player */}
         <WorkoutPlayer 
           workoutId={activeWorkoutId} 
           onClose={() => setActiveWorkoutId(null)} 
