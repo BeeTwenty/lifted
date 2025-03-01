@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { WorkoutCard } from "@/components/WorkoutCard";
 import { WorkoutStats } from "@/components/WorkoutStats";
-import { LogOut, UtensilsCrossed, Settings } from "lucide-react";
+import { LogOut, UtensilsCrossed, Settings, Menu } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate, Link } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { CreateWorkoutDialog } from "@/components/CreateWorkoutDialog";
 import { WorkoutPlayer } from "@/components/WorkoutPlayer";
 import { NutritionStat } from "@/components/NutritionStat";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -160,7 +161,8 @@ const Index = () => {
             <h1 className="text-4xl font-bold">Welcome back, {displayName}</h1>
             <p className="text-gray-500 mt-2">Track your fitness journey</p>
           </div>
-          <div className="flex gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:flex gap-2">
+
             <Link to="/nutrition">
               <Button variant="outline" className="bg-primary/5">
                 <UtensilsCrossed className="mr-2 h-4 w-4" />
