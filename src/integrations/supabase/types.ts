@@ -123,25 +123,31 @@ export type Database = {
           avatar_url: string | null
           daily_calories: number | null
           full_name: string | null
+          hour_goal: number | null
           id: string
           updated_at: string
           username: string | null
+          workout_goal: number | null
         }
         Insert: {
           avatar_url?: string | null
           daily_calories?: number | null
           full_name?: string | null
+          hour_goal?: number | null
           id: string
           updated_at?: string
           username?: string | null
+          workout_goal?: number | null
         }
         Update: {
           avatar_url?: string | null
           daily_calories?: number | null
           full_name?: string | null
+          hour_goal?: number | null
           id?: string
           updated_at?: string
           username?: string | null
+          workout_goal?: number | null
         }
         Relationships: []
       }

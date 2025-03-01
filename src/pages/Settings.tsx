@@ -18,7 +18,9 @@ const Settings = () => {
   const [formData, setFormData] = useState({
     fullName: "",
     username: "",
-    dailyCalories: 0
+    dailyCalories: 0,
+    workoutGoal: 5,
+    hourGoal: 10,
   });
 
   // Fetch user profile data
@@ -30,7 +32,7 @@ const Settings = () => {
 
       const { data, error } = await supabase
         .from("profiles")
-        .select("full_name, username, daily_calories")
+        .select("full_name, username, daily_calories, workout_goal, hour_goal")
         .eq("id", user.id)
         .single();
 
@@ -46,6 +48,8 @@ const Settings = () => {
         fullName: profile.full_name || "",
         username: profile.username || "",
         dailyCalories: profile.daily_calories || 2000,
+        workoutGoal: profile.workout_goal || 5,
+        hourGoal: profile.hour_goal || 10,
       });
     }
   }, [profile]);
@@ -62,6 +66,8 @@ const Settings = () => {
           full_name: data.fullName,
           username: data.username,
           daily_calories: data.dailyCalories,
+          workout_goal: data.workoutGoal,
+          hour_goal: data.hourGoal,
         })
         .eq("id", user.id);
       
@@ -71,6 +77,7 @@ const Settings = () => {
     onSuccess: () => {
       // Invalidate relevant queries and show success message
       queryClient.invalidateQueries({ queryKey: ["userProfile"] });
+      queryClient.invalidateQueries({ queryKey: ["workoutStats"] });
       toast({
         title: "Settings updated",
         description: "Your profile settings have been updated successfully."
@@ -145,6 +152,38 @@ const Settings = () => {
                 />
                 <p className="text-sm text-muted-foreground">
                   Set your daily calorie target for nutrition tracking
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="workoutGoal">Weekly Workout Goal</Label>
+                <Input
+                  id="workoutGoal"
+                  type="number"
+                  value={formData.workoutGoal}
+                  onChange={(e) => setFormData({ ...formData, workoutGoal: Number(e.target.value) })}
+                  placeholder="5"
+                  min="1"
+                  max="30"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Set your target number of workouts per week
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="hourGoal">Weekly Workout Hours Goal</Label>
+                <Input
+                  id="hourGoal"
+                  type="number"
+                  value={formData.hourGoal}
+                  onChange={(e) => setFormData({ ...formData, hourGoal: Number(e.target.value) })}
+                  placeholder="10"
+                  min="1"
+                  max="50"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Set your target hours of exercise per week
                 </p>
               </div>
             </CardContent>
