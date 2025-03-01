@@ -103,6 +103,19 @@ export function WorkoutPlayer({ workoutId, onClose }: WorkoutPlayerProps) {
     }
   };
 
+  // Function to check if the media URL is a YouTube link
+const isYouTubeLink = (url: string): boolean => {
+  return url.includes("youtube.com") || url.includes("youtu.be");
+};
+
+// Function to extract the YouTube video ID
+const extractYouTubeID = (url: string): string | null => {
+  const regex = /(?:youtu\.be\/|youtube\.com\/(?:.*v=|.*\/|.*embed\/))([^"&?\/\s]{11})/;
+  const match = url.match(regex);
+  return match ? match[1] : null;
+};
+
+
   const handleNext = () => {
     if (currentExerciseIndex < exercises.length - 1) {
       saveCurrentExerciseChanges().then(() => {
@@ -195,20 +208,32 @@ export function WorkoutPlayer({ workoutId, onClose }: WorkoutPlayerProps) {
               Exercise {currentExerciseIndex + 1} of {exercises.length}
             </div>
             
-            {/* Exercise Media */}
-            <div className="aspect-video bg-muted rounded-lg overflow-hidden">
-              {exerciseMedia ? (
-                <img 
-                  src={exerciseMedia} 
-                  alt={currentExercise.name} 
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <p className="text-muted-foreground">No image available</p>
-                </div>
-              )}
-            </div>
+           {/* Exercise Media */}
+<div className="aspect-video bg-muted rounded-lg overflow-hidden">
+  {exerciseMedia ? (
+    isYouTubeLink(exerciseMedia) ? (
+      <iframe 
+        className="w-full h-full"
+        src={`https://www.youtube.com/embed/${extractYouTubeID(exerciseMedia)}`}
+        title="Exercise Video"
+        frameBorder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      ></iframe>
+    ) : (
+      <img 
+        src={exerciseMedia} 
+        alt={currentExercise.name} 
+        className="w-full h-full object-cover"
+      />
+    )
+  ) : (
+    <div className="w-full h-full flex items-center justify-center">
+      <p className="text-muted-foreground">No media available</p>
+    </div>
+  )}
+</div>
+
             
             {/* Exercise Details */}
             <div className="space-y-4">

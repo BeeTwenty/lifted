@@ -13,6 +13,19 @@ interface ExerciseTemplateCardProps {
   onAdd: (sets: number, reps: number, weight: number | null) => void;
 }
 
+// Function to check if the media URL is a YouTube link
+const isYouTubeLink = (url: string): boolean => {
+  return url.includes("youtube.com") || url.includes("youtu.be");
+};
+
+// Function to extract the YouTube video ID
+const extractYouTubeID = (url: string): string | null => {
+  const regex = /(?:youtu\.be\/|youtube\.com\/(?:.*v=|.*\/|.*embed\/))([^"&?\/\s]{11})/;
+  const match = url.match(regex);
+  return match ? match[1] : null;
+};
+
+
 export function ExerciseTemplateCard({ name, description, mediaUrl, targetMuscle, onAdd }: ExerciseTemplateCardProps) {
   const [showDetails, setShowDetails] = useState(false);
   const [sets, setSets] = useState(3);
@@ -21,13 +34,30 @@ export function ExerciseTemplateCard({ name, description, mediaUrl, targetMuscle
 
   return (
     <Card className="overflow-hidden">
-      <div className="aspect-video relative">
-        <img 
-          src={mediaUrl} 
-          alt={`${name} demonstration`} 
-          className="object-cover w-full h-full"
-        />
-      </div>
+      <div className="aspect-video bg-muted rounded-lg overflow-hidden">
+  {mediaUrl ? (
+    isYouTubeLink(mediaUrl) ? (
+      <iframe 
+        className="w-full h-full"
+        src={`https://www.youtube.com/embed/${extractYouTubeID(mediaUrl)}`}
+        title="Exercise Video"
+        frameBorder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      ></iframe>
+    ) : (
+      <img 
+        src={mediaUrl} 
+        alt={name} 
+        className="w-full h-full object-cover"
+      />
+    )
+  ) : (
+    <div className="w-full h-full flex items-center justify-center">
+      <p className="text-muted-foreground">No media available</p>
+    </div>
+  )}
+</div>
       <div className="p-4 space-y-2">
         <div className="flex justify-between items-start">
           <div>
