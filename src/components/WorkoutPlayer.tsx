@@ -1,11 +1,11 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { ChevronLeft, ChevronRight, X, Save } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Save, CheckCircle, Timer } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface Exercise {
   id: string;
@@ -31,7 +31,11 @@ export function WorkoutPlayer({ workoutId, onClose }: WorkoutPlayerProps) {
   const [editedReps, setEditedReps] = useState<number>(0);
   const [editedWeight, setEditedWeight] = useState<number | null>(null);
   const [isSaving, setSaving] = useState(false);
+  const [timer, setTimer] = useState<number>(0);
+  const [isActive, setIsActive] = useState<boolean>(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const intervalRef = useRef<number | null>(null);
 
   const currentExercise = exercises[currentExerciseIndex];
 
@@ -49,11 +53,38 @@ export function WorkoutPlayer({ workoutId, onClose }: WorkoutPlayerProps) {
     }
   }, [currentExercise]);
 
+  useEffect(() => {
+    if (workout && !isActive) {
+      setIsActive(true);
+    }
+  }, [workout]);
+
+  useEffect(() => {
+    if (isActive) {
+      intervalRef.current = window.setInterval(() => {
+        setTimer((prevTimer) => prevTimer + 1);
+      }, 1000);
+    } else if (intervalRef.current) {
+      window.clearInterval(intervalRef.current);
+    }
+    
+    return () => {
+      if (intervalRef.current) {
+        window.clearInterval(intervalRef.current);
+      }
+    };
+  }, [isActive]);
+
+  const formatTime = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
   const fetchWorkoutDetails = async () => {
     try {
       setLoading(true);
       
-      // Fetch workout details
       const { data: workoutData, error: workoutError } = await supabase
         .from("workouts")
         .select("*")
@@ -63,7 +94,6 @@ export function WorkoutPlayer({ workoutId, onClose }: WorkoutPlayerProps) {
       if (workoutError) throw workoutError;
       setWorkout(workoutData);
       
-      // Fetch exercises for this workout
       const { data: exerciseData, error: exercisesError } = await supabase
         .from("exercises")
         .select("*")
@@ -103,18 +133,15 @@ export function WorkoutPlayer({ workoutId, onClose }: WorkoutPlayerProps) {
     }
   };
 
-  // Function to check if the media URL is a YouTube link
-const isYouTubeLink = (url: string): boolean => {
-  return url.includes("youtube.com") || url.includes("youtu.be");
-};
+  const isYouTubeLink = (url: string): boolean => {
+    return url.includes("youtube.com") || url.includes("youtu.be");
+  };
 
-// Function to extract the YouTube video ID
-const extractYouTubeID = (url: string): string | null => {
-  const regex = /(?:youtu\.be\/|youtube\.com\/(?:.*v=|.*\/|.*embed\/))([^"&?\/\s]{11})/;
-  const match = url.match(regex);
-  return match ? match[1] : null;
-};
-
+  const extractYouTubeID = (url: string): string | null => {
+    const regex = /(?:youtu\.be\/|youtube\.com\/(?:.*v=|.*\/|.*embed\/))([^"&?\/\s]{11})/;
+    const match = url.match(regex);
+    return match ? match[1] : null;
+  };
 
   const handleNext = () => {
     if (currentExerciseIndex < exercises.length - 1) {
@@ -137,7 +164,6 @@ const extractYouTubeID = (url: string): string | null => {
   const saveCurrentExerciseChanges = async () => {
     if (!currentExercise) return Promise.resolve();
     
-    // Only save if values have changed
     if (
       editedSets !== currentExercise.sets ||
       editedReps !== currentExercise.reps ||
@@ -156,7 +182,6 @@ const extractYouTubeID = (url: string): string | null => {
         
         if (error) throw error;
         
-        // Update local state
         setExercises(exercises.map(ex => 
           ex.id === currentExercise.id 
             ? { ...ex, sets: editedSets, reps: editedReps, weight: editedWeight } 
@@ -185,13 +210,56 @@ const extractYouTubeID = (url: string): string | null => {
     saveCurrentExerciseChanges();
   };
 
+  const handleFinishWorkout = async () => {
+    try {
+      setSaving(true);
+      
+      await saveCurrentExerciseChanges();
+      
+      setIsActive(false);
+      
+      const durationInMinutes = Math.ceil(timer / 60);
+      
+      const { error } = await supabase
+        .from("workouts")
+        .update({ duration: durationInMinutes })
+        .eq("id", workoutId);
+      
+      if (error) throw error;
+      
+      queryClient.invalidateQueries({ queryKey: ["workoutStats"] });
+      queryClient.invalidateQueries({ queryKey: ["routines"] });
+      
+      toast({
+        title: "Workout completed",
+        description: `You finished the workout in ${formatTime(timer)}!`,
+      });
+      
+      onClose();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error finishing workout",
+        description: error.message,
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (!workoutId) return null;
 
   return (
     <Dialog open={!!workoutId} onOpenChange={() => onClose()}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{workout?.title || "Workout"}</DialogTitle>
+          <DialogTitle className="flex items-center justify-between">
+            <span>{workout?.title || "Workout"}</span>
+            <div className="flex items-center gap-2 text-sm font-normal">
+              <Timer className="h-4 w-4" />
+              <span>{formatTime(timer)}</span>
+            </div>
+          </DialogTitle>
         </DialogHeader>
         
         {loading ? (
@@ -208,34 +276,31 @@ const extractYouTubeID = (url: string): string | null => {
               Exercise {currentExerciseIndex + 1} of {exercises.length}
             </div>
             
-           {/* Exercise Media */}
-<div className="aspect-video bg-muted rounded-lg overflow-hidden">
-  {exerciseMedia ? (
-    isYouTubeLink(exerciseMedia) ? (
-      <iframe 
-        className="w-full h-full"
-        src={`https://www.youtube.com/embed/${extractYouTubeID(exerciseMedia)}`}
-        title="Exercise Video"
-        frameBorder="0"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowFullScreen
-      ></iframe>
-    ) : (
-      <img 
-        src={exerciseMedia} 
-        alt={currentExercise.name} 
-        className="w-full h-full object-cover"
-      />
-    )
-  ) : (
-    <div className="w-full h-full flex items-center justify-center">
-      <p className="text-muted-foreground">No media available</p>
-    </div>
-  )}
-</div>
-
+            <div className="aspect-video bg-muted rounded-lg overflow-hidden">
+              {exerciseMedia ? (
+                isYouTubeLink(exerciseMedia) ? (
+                  <iframe 
+                    className="w-full h-full"
+                    src={`https://www.youtube.com/embed/${extractYouTubeID(exerciseMedia)}`}
+                    title="Exercise Video"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  ></iframe>
+                ) : (
+                  <img 
+                    src={exerciseMedia} 
+                    alt={currentExercise.name} 
+                    className="w-full h-full object-cover"
+                  />
+                )
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <p className="text-muted-foreground">No media available</p>
+                </div>
+              )}
+            </div>
             
-            {/* Exercise Details */}
             <div className="space-y-4">
               <h2 className="text-2xl font-bold">{currentExercise.name}</h2>
               
@@ -295,7 +360,6 @@ const extractYouTubeID = (url: string): string | null => {
               )}
             </div>
             
-            {/* Navigation Controls */}
             <div className="flex justify-between">
               <Button 
                 variant="outline"
@@ -306,21 +370,24 @@ const extractYouTubeID = (url: string): string | null => {
                 Previous
               </Button>
               
-              <Button
-                variant="outline"
-                onClick={onClose}
-              >
-                <X className="mr-1" />
-                Exit
-              </Button>
-              
-              <Button 
-                onClick={handleNext}
-                disabled={currentExerciseIndex === exercises.length - 1}
-              >
-                Next
-                <ChevronRight className="ml-1" />
-              </Button>
+              {currentExerciseIndex === exercises.length - 1 ? (
+                <Button 
+                  variant="default" 
+                  className="bg-green-600 hover:bg-green-700" 
+                  onClick={handleFinishWorkout}
+                  disabled={isSaving}
+                >
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Finish Workout
+                </Button>
+              ) : (
+                <Button 
+                  onClick={handleNext}
+                >
+                  Next
+                  <ChevronRight className="ml-1" />
+                </Button>
+              )}
             </div>
           </div>
         )}

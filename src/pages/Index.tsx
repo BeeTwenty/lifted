@@ -97,6 +97,7 @@ const Index = () => {
         .select(`
           id,
           title,
+          duration,
           exercises (count)
         `)
         .eq("user_id", user.id)
@@ -108,6 +109,7 @@ const Index = () => {
         id: workout.id,
         title: workout.title,
         exercises: workout.exercises[0].count,
+        duration: workout.duration || 0,
       }));
     },
   });
@@ -209,7 +211,7 @@ const Index = () => {
                 <WorkoutCard
                   key={routine.id}
                   title={routine.title}
-                  duration=""
+                  duration={routine.duration ? `${routine.duration} min` : ""}
                   exercises={routine.exercises}
                   onClick={() => setActiveWorkoutId(routine.id)}
                   onDelete={() => handleDeleteWorkout(routine.id)}
