@@ -36,11 +36,12 @@ import {
   User,
   Save,
   Shield,
+  AlertTriangle,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Database as DatabaseTypes } from "@/integrations/supabase/types";
+import type { Database as DatabaseTypes } from "@/integrations/supabase/types";
 
-// Define allowed table names as a type to satisfy Typescript
+// Define allowed table names as a type to satisfy TypeScript
 type AllowedTable = "exercise_templates" | "food_logs" | "workouts" | "profiles";
 
 const Admin = () => {
@@ -50,22 +51,24 @@ const Admin = () => {
   const [activeTab, setActiveTab] = useState("database");
   
   // Check if user is admin
-  const { data: userProfile, isLoading: profileLoading } = useQuery({
+  const { data: userProfile, isLoading: profileLoading, error: profileError } = useQuery({
     queryKey: ["userProfile"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
+        // Redirect to login if not authenticated
         navigate("/auth");
         throw new Error("Not authenticated");
       }
 
-      const { data, error } = await supabase
+      // Get user's profile
+      const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", user.id)
         .single();
 
-      if (error) throw error;
+      if (profileError) throw profileError;
       
       // Check if user is admin
       const { data: adminData, error: adminError } = await supabase
@@ -84,13 +87,30 @@ const Admin = () => {
       
       if (!isAdmin) {
         // Redirect non-admin users
+        toast({
+          variant: "destructive",
+          title: "Access Denied",
+          description: "You don't have admin privileges to access this page.",
+        });
         navigate("/");
         throw new Error("Not authorized");
       }
       
-      return { ...data, isAdmin };
+      return { ...profileData, isAdmin };
     },
   });
+
+  useEffect(() => {
+    // If there's an error with profile loading, show access denied
+    if (profileError) {
+      toast({
+        variant: "destructive",
+        title: "Access Denied",
+        description: "You need to be an admin to access this page.",
+      });
+      navigate("/");
+    }
+  }, [profileError, navigate, toast]);
 
   // Database Management
   const [selectedTable, setSelectedTable] = useState<AllowedTable>("exercise_templates");
@@ -104,6 +124,7 @@ const Admin = () => {
     queryFn: async () => {
       return ["exercise_templates", "food_logs", "workouts", "profiles"] as AllowedTable[];
     },
+    enabled: !!userProfile?.isAdmin,
   });
 
   const { data: selectedTableData, isLoading: tableDataLoading, refetch: refetchTableData } = useQuery({
@@ -117,6 +138,7 @@ const Admin = () => {
       if (error) throw error;
       return data;
     },
+    enabled: !!userProfile?.isAdmin,
   });
 
   // Get table columns
@@ -138,6 +160,7 @@ const Admin = () => {
           return [];
       }
     },
+    enabled: !!userProfile?.isAdmin,
   });
 
   // Delete item mutation
@@ -158,7 +181,7 @@ const Admin = () => {
         description: "The item was successfully deleted.",
       });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         variant: "destructive",
         title: "Error deleting item",
@@ -186,7 +209,7 @@ const Admin = () => {
         description: "The item was successfully updated.",
       });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         variant: "destructive",
         title: "Error updating item",
@@ -213,7 +236,7 @@ const Admin = () => {
         description: "The item was successfully created.",
       });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         variant: "destructive",
         title: "Error creating item",
@@ -274,6 +297,7 @@ const Admin = () => {
       if (error) throw error;
       return data;
     },
+    enabled: !!userProfile?.isAdmin,
   });
 
   // Get admin users
@@ -282,12 +306,12 @@ const Admin = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("admins")
-        .select("user_id")
-        .limit(100);
+        .select("user_id");
       
       if (error) throw error;
       return data.map(admin => admin.user_id);
     },
+    enabled: !!userProfile?.isAdmin,
   });
 
   // Toggle admin status mutation
@@ -319,7 +343,7 @@ const Admin = () => {
       });
       refetchAdmins();
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         variant: "destructive",
         title: "Error updating admin status",

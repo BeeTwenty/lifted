@@ -13,6 +13,13 @@ import { AuthProvider } from "@/components/AuthProvider";
 // Create a client
 const queryClient = new QueryClient();
 
+// Protected route component for admin access
+const AdminProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  // The actual protection logic is inside the Admin component
+  // This is just to make the structure clear in the router
+  return <>{children}</>;
+};
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -23,7 +30,11 @@ function App() {
             <Route path="/auth" element={<Auth />} />
             <Route path="/nutrition" element={<Nutrition />} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="/admin" element={<Admin />} />
+            <Route path="/admin" element={
+              <AdminProtectedRoute>
+                <Admin />
+              </AdminProtectedRoute>
+            } />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <Toaster />
