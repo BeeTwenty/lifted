@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,9 +39,18 @@ import {
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Database as DatabaseTypes } from "@/integrations/supabase/types";
+import { PostgrestError } from "@supabase/supabase-js";
 
 // Define allowed table names as a type to satisfy TypeScript
 type AllowedTable = "exercise_templates" | "food_logs" | "workouts" | "profiles";
+
+// Define table types based on our Database types definition
+type TableTypes = {
+  exercise_templates: DatabaseTypes["public"]["Tables"]["exercise_templates"]["Insert"];
+  food_logs: DatabaseTypes["public"]["Tables"]["food_logs"]["Insert"];
+  workouts: DatabaseTypes["public"]["Tables"]["workouts"]["Insert"];
+  profiles: DatabaseTypes["public"]["Tables"]["profiles"]["Insert"];
+};
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -181,22 +189,25 @@ const Admin = () => {
         description: "The item was successfully deleted.",
       });
     },
-    onError: (error: Error) => {
+    onError: (error: PostgrestError | Error) => {
       toast({
         variant: "destructive",
         title: "Error deleting item",
-        description: error.message,
+        description: error instanceof Error ? error.message : error.details,
       });
     },
   });
 
-  // Update item mutation
+  // Type-safe update item mutation
   const updateItemMutation = useMutation({
     mutationFn: async (data: Record<string, any>) => {
+      // Create a properly typed object for the specific table
+      const { id, ...updateData } = data;
+      
       const { error } = await supabase
         .from(selectedTable)
-        .update(data)
-        .eq("id", data.id);
+        .update(updateData)
+        .eq("id", id);
       
       if (error) throw error;
       return data;
@@ -209,24 +220,55 @@ const Admin = () => {
         description: "The item was successfully updated.",
       });
     },
-    onError: (error: Error) => {
+    onError: (error: PostgrestError | Error) => {
       toast({
         variant: "destructive",
         title: "Error updating item",
-        description: error.message,
+        description: error instanceof Error ? error.message : error.details,
       });
     },
   });
 
-  // Create item mutation
+  // Type-safe create item mutation
   const createItemMutation = useMutation({
     mutationFn: async (data: Record<string, any>) => {
+      // For profiles, we need to handle them differently since they link to auth users
+      if (selectedTable === "profiles") {
+        toast({
+          variant: "destructive",
+          title: "Cannot create profiles directly",
+          description: "Profiles are created automatically when users sign up.",
+        });
+        throw new Error("Cannot create profiles directly");
+      }
+      
+      // Add any required fields for specific tables
+      const finalData = { ...data };
+      
+      // Add user_id for tables that require it
+      if (selectedTable === "food_logs" || selectedTable === "workouts") {
+        if (!finalData.user_id) {
+          // Use the current user's ID as a fallback
+          const { data: { user } } = await supabase.auth.getUser();
+          finalData.user_id = user?.id;
+        }
+      }
+      
+      // Set required fields for exercise_templates
+      if (selectedTable === "exercise_templates") {
+        if (!finalData.name) finalData.name = "New Exercise";
+        if (!finalData.description) finalData.description = "Description";
+        if (!finalData.target_muscle) finalData.target_muscle = "General";
+        if (!finalData.media_url) finalData.media_url = "https://placehold.co/400";
+      }
+      
+      // Perform the insert operation
       const { error } = await supabase
         .from(selectedTable)
-        .insert(data);
+        .insert(finalData);
       
       if (error) throw error;
-      return data;
+      return finalData;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tableData", selectedTable] });
@@ -236,11 +278,11 @@ const Admin = () => {
         description: "The item was successfully created.",
       });
     },
-    onError: (error: Error) => {
+    onError: (error: PostgrestError | Error) => {
       toast({
         variant: "destructive",
         title: "Error creating item",
-        description: error.message,
+        description: error instanceof Error ? error.message : error.details,
       });
     },
   });
@@ -343,11 +385,11 @@ const Admin = () => {
       });
       refetchAdmins();
     },
-    onError: (error: Error) => {
+    onError: (error: PostgrestError | Error) => {
       toast({
         variant: "destructive",
         title: "Error updating admin status",
-        description: error.message,
+        description: error instanceof Error ? error.message : error.details,
       });
     },
   });
