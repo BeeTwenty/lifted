@@ -164,6 +164,7 @@ const Index = () => {
             <p className="text-gray-500 mt-2">Track your fitness journey</p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:flex gap-2">
+          <CreateWorkoutDialog />
 
             <Link to="/nutrition">
               <Button variant="outline" className="bg-primary/5">
@@ -177,7 +178,6 @@ const Index = () => {
                 Settings
               </Button>
             </Link>
-            <CreateWorkoutDialog />
             <Button variant="outline" onClick={handleSignOut}>
               <LogOut className="mr-2 h-4 w-4" />
               Sign Out

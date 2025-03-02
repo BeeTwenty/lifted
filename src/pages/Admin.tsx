@@ -103,7 +103,7 @@ const Admin = () => {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Dashboard
             </Button>
-            <h1 className="text-3xl font-bold">Admin Panel</h1>
+            <h1 className="ml-2 text-3xl font-bold">Admin Panel</h1>
           </div>
           <div className="flex items-center">
             <Shield className="h-5 w-5 mr-2 text-blue-600" />

@@ -9,6 +9,7 @@ import NotFound from "@/pages/NotFound";
 import Nutrition from "@/pages/Nutrition";
 import Admin from "@/pages/Admin";
 import { AuthProvider } from "@/components/AuthProvider";
+import { hideSplashScreen } from "vite-plugin-splash-screen/runtime";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -21,6 +22,7 @@ const AdminProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 function App() {
+  hideSplashScreen();
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
