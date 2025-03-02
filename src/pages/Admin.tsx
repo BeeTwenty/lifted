@@ -34,9 +34,14 @@ import {
   Plus, 
   ArrowLeft,
   User,
-  Save
+  Save,
+  Shield,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Database as DatabaseTypes } from "@/integrations/supabase/types";
+
+// Define allowed table names as a type to satisfy Typescript
+type AllowedTable = "exercise_templates" | "food_logs" | "workouts" | "profiles";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -61,22 +66,43 @@ const Admin = () => {
         .single();
 
       if (error) throw error;
-      return data;
+      
+      // Check if user is admin
+      const { data: adminData, error: adminError } = await supabase
+        .from("admins")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+      
+      if (adminError && adminError.code !== 'PGRST116') {
+        // Not found error is fine, just means user isn't admin
+        console.error("Error checking admin status:", adminError);
+      }
+      
+      // Add admin status to the profile
+      const isAdmin = !!adminData;
+      
+      if (!isAdmin) {
+        // Redirect non-admin users
+        navigate("/");
+        throw new Error("Not authorized");
+      }
+      
+      return { ...data, isAdmin };
     },
   });
 
   // Database Management
-  const [selectedTable, setSelectedTable] = useState("exercise_templates");
-  const [tableData, setTableData] = useState([]);
+  const [selectedTable, setSelectedTable] = useState<AllowedTable>("exercise_templates");
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [currentItem, setCurrentItem] = useState(null);
-  const [editFormData, setEditFormData] = useState({});
+  const [currentItem, setCurrentItem] = useState<any>(null);
+  const [editFormData, setEditFormData] = useState<Record<string, any>>({});
   
   // Get table data
-  const { data: tables, isLoading: tablesLoading } = useQuery({
+  const { data: tables } = useQuery({
     queryKey: ["adminTables"],
     queryFn: async () => {
-      return ["exercise_templates", "food_logs", "workouts", "profiles"];
+      return ["exercise_templates", "food_logs", "workouts", "profiles"] as AllowedTable[];
     },
   });
 
@@ -116,7 +142,7 @@ const Admin = () => {
 
   // Delete item mutation
   const deleteItemMutation = useMutation({
-    mutationFn: async (id) => {
+    mutationFn: async (id: string) => {
       const { error } = await supabase
         .from(selectedTable)
         .delete()
@@ -143,7 +169,7 @@ const Admin = () => {
 
   // Update item mutation
   const updateItemMutation = useMutation({
-    mutationFn: async (data) => {
+    mutationFn: async (data: Record<string, any>) => {
       const { error } = await supabase
         .from(selectedTable)
         .update(data)
@@ -171,7 +197,7 @@ const Admin = () => {
 
   // Create item mutation
   const createItemMutation = useMutation({
-    mutationFn: async (data) => {
+    mutationFn: async (data: Record<string, any>) => {
       const { error } = await supabase
         .from(selectedTable)
         .insert(data);
@@ -197,7 +223,7 @@ const Admin = () => {
   });
 
   // Handle edit button click
-  const handleEditClick = (item) => {
+  const handleEditClick = (item: any) => {
     setCurrentItem(item);
     setEditFormData(item);
     setIsEditDialogOpen(true);
@@ -207,7 +233,7 @@ const Admin = () => {
   const handleCreateClick = () => {
     setCurrentItem(null);
     // Initialize empty form data based on columns
-    const emptyForm = {};
+    const emptyForm: Record<string, any> = {};
     tableColumns?.forEach(column => {
       if (column !== 'id' && column !== 'created_at' && column !== 'updated_at') {
         emptyForm[column] = '';
@@ -218,7 +244,7 @@ const Admin = () => {
   };
 
   // Handle form submit
-  const handleFormSubmit = (e) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (currentItem) {
       updateItemMutation.mutate(editFormData);
@@ -228,7 +254,7 @@ const Admin = () => {
   };
 
   // Handle form input change
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setEditFormData(prev => ({
       ...prev,
@@ -250,6 +276,58 @@ const Admin = () => {
     },
   });
 
+  // Get admin users
+  const { data: adminUsers, refetch: refetchAdmins } = useQuery({
+    queryKey: ["adminUsers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("admins")
+        .select("user_id")
+        .limit(100);
+      
+      if (error) throw error;
+      return data.map(admin => admin.user_id);
+    },
+  });
+
+  // Toggle admin status mutation
+  const toggleAdminMutation = useMutation({
+    mutationFn: async ({ userId, isAdmin }: { userId: string, isAdmin: boolean }) => {
+      if (isAdmin) {
+        // Remove admin role
+        const { error } = await supabase
+          .from("admins")
+          .delete()
+          .eq("user_id", userId);
+        
+        if (error) throw error;
+      } else {
+        // Add admin role
+        const { error } = await supabase
+          .from("admins")
+          .insert({ user_id: userId });
+        
+        if (error) throw error;
+      }
+      return { userId, isAdmin: !isAdmin };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
+      toast({
+        title: "Admin status updated",
+        description: "The user's admin status was successfully updated.",
+      });
+      refetchAdmins();
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Error updating admin status",
+        description: error.message,
+      });
+    },
+  });
+
   // Site Settings
   const [siteSettings, setSiteSettings] = useState({
     siteName: "Fitness Tracker",
@@ -260,7 +338,7 @@ const Admin = () => {
 
   // Update site settings mutation
   const updateSettingsMutation = useMutation({
-    mutationFn: async (data) => {
+    mutationFn: async (data: typeof siteSettings) => {
       // This would normally update site settings in the database
       // For now, we're just simulating it
       return data;
@@ -271,7 +349,7 @@ const Admin = () => {
         description: "The site settings were successfully updated.",
       });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         variant: "destructive",
         title: "Error updating settings",
@@ -281,31 +359,19 @@ const Admin = () => {
   });
 
   // Handle settings form submit
-  const handleSettingsSubmit = (e) => {
+  const handleSettingsSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateSettingsMutation.mutate(siteSettings);
   };
 
   // Handle settings input change
-  const handleSettingsChange = (e) => {
+  const handleSettingsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setSiteSettings(prev => ({
       ...prev,
-      [name]: value
+      [name]: name.includes('default') ? parseInt(value) : value
     }));
   };
-
-  // Redirect if not admin (in a real app, you'd check for admin role)
-  useEffect(() => {
-    const checkAdmin = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/auth");
-      }
-      // In a real app, you'd check if the user has admin role
-    };
-    checkAdmin();
-  }, [navigate]);
 
   if (profileLoading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
@@ -325,6 +391,10 @@ const Admin = () => {
               Back to Dashboard
             </Button>
             <h1 className="text-3xl font-bold">Admin Panel</h1>
+          </div>
+          <div className="flex items-center">
+            <Shield className="h-5 w-5 mr-2 text-blue-600" />
+            <span className="text-sm font-medium">Admin Access</span>
           </div>
         </div>
 
@@ -488,7 +558,7 @@ const Admin = () => {
               <CardHeader>
                 <CardTitle>User Management</CardTitle>
                 <CardDescription>
-                  View and manage user accounts.
+                  View and manage user accounts and admin privileges.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -516,30 +586,42 @@ const Admin = () => {
                             </TableCell>
                           </TableRow>
                         ) : (
-                          users?.map(user => (
-                            <TableRow key={user.id}>
-                              <TableCell className="max-w-[80px] truncate">{user.id}</TableCell>
-                              <TableCell>{user.username || "—"}</TableCell>
-                              <TableCell>{user.full_name || "—"}</TableCell>
-                              <TableCell>{user.daily_calories || "—"}</TableCell>
-                              <TableCell>{user.workout_goal || "—"}</TableCell>
-                              <TableCell>{user.hour_goal || "—"}</TableCell>
-                              <TableCell>
-                                <div className="flex space-x-2">
-                                  <Button 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    onClick={() => {
-                                      // Navigate to user profile
-                                      navigate(`/settings?user=${user.id}`);
-                                    }}
-                                  >
-                                    <User className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))
+                          users?.map(user => {
+                            const isAdmin = adminUsers?.includes(user.id);
+                            return (
+                              <TableRow key={user.id}>
+                                <TableCell className="max-w-[80px] truncate">{user.id}</TableCell>
+                                <TableCell>{user.username || "—"}</TableCell>
+                                <TableCell>{user.full_name || "—"}</TableCell>
+                                <TableCell>{user.daily_calories || "—"}</TableCell>
+                                <TableCell>{user.workout_goal || "—"}</TableCell>
+                                <TableCell>{user.hour_goal || "—"}</TableCell>
+                                <TableCell>
+                                  <div className="flex space-x-2">
+                                    <Button 
+                                      variant={isAdmin ? "default" : "outline"} 
+                                      size="sm" 
+                                      className={`${isAdmin ? 'bg-blue-600 hover:bg-blue-700' : ''} flex items-center`}
+                                      onClick={() => toggleAdminMutation.mutate({ userId: user.id, isAdmin: !!isAdmin })}
+                                    >
+                                      <Shield className="h-3 w-3 mr-1" />
+                                      {isAdmin ? 'Admin' : 'Make Admin'}
+                                    </Button>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon" 
+                                      onClick={() => {
+                                        // Navigate to user profile
+                                        navigate(`/settings?user=${user.id}`);
+                                      }}
+                                    >
+                                      <User className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
                         )}
                       </TableBody>
                     </Table>
