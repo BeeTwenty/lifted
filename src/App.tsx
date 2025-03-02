@@ -7,6 +7,7 @@ import Auth from "@/pages/Auth";
 import Settings from "@/pages/Settings";
 import NotFound from "@/pages/NotFound";
 import Nutrition from "@/pages/Nutrition";
+import Admin from "@/pages/Admin";
 import { AuthProvider } from "@/components/AuthProvider";
 
 // Create a client
@@ -22,6 +23,7 @@ function App() {
             <Route path="/auth" element={<Auth />} />
             <Route path="/nutrition" element={<Nutrition />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/admin" element={<Admin />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <Toaster />
