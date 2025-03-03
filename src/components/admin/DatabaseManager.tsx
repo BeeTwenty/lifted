@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -32,19 +31,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Database as DatabaseTypes } from "@/integrations/supabase/types";
 import { PostgrestError } from "@supabase/supabase-js";
 
-// Define allowed table names as a type to satisfy TypeScript
 type AllowedTable = "exercise_templates" | "food_logs" | "workouts" | "profiles";
 
-// Define type for the exercise templates table
 type ExerciseTemplate = DatabaseTypes["public"]["Tables"]["exercise_templates"]["Insert"];
-// Define type for the food logs table
 type FoodLog = DatabaseTypes["public"]["Tables"]["food_logs"]["Insert"];
-// Define type for the workouts table
 type Workout = DatabaseTypes["public"]["Tables"]["workouts"]["Insert"];
-// Define type for the profiles table
 type Profile = DatabaseTypes["public"]["Tables"]["profiles"]["Insert"];
 
-// Union type for all table types
 type TableRow = ExerciseTemplate | FoodLog | Workout | Profile;
 
 interface DatabaseManagerProps {
@@ -55,13 +48,11 @@ const DatabaseManager = ({ isAdmin }: DatabaseManagerProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // Database Management
   const [selectedTable, setSelectedTable] = useState<AllowedTable>("exercise_templates");
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentItem, setCurrentItem] = useState<any>(null);
   const [editFormData, setEditFormData] = useState<Record<string, any>>({});
-  
-  // Get table data
+
   const { data: tables } = useQuery({
     queryKey: ["adminTables"],
     queryFn: async () => {
@@ -84,12 +75,9 @@ const DatabaseManager = ({ isAdmin }: DatabaseManagerProps) => {
     enabled: isAdmin,
   });
 
-  // Get table columns
   const { data: tableColumns, isLoading: columnsLoading } = useQuery({
     queryKey: ["tableColumns", selectedTable],
     queryFn: async () => {
-      // This would normally query the database for column information
-      // For simplicity, we're using hardcoded columns based on the table
       switch (selectedTable) {
         case "exercise_templates":
           return ["id", "name", "description", "target_muscle", "media_url", "created_at"];
@@ -106,7 +94,6 @@ const DatabaseManager = ({ isAdmin }: DatabaseManagerProps) => {
     enabled: isAdmin,
   });
 
-  // Delete item mutation
   const deleteItemMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -133,7 +120,6 @@ const DatabaseManager = ({ isAdmin }: DatabaseManagerProps) => {
     },
   });
 
-  // Create a type-safe update function for each table type
   const updateExerciseTemplate = async (data: Partial<ExerciseTemplate> & { id: string }) => {
     const { id, ...updateData } = data;
     const { error } = await supabase
@@ -174,7 +160,6 @@ const DatabaseManager = ({ isAdmin }: DatabaseManagerProps) => {
     return data;
   };
 
-  // Type-safe update item mutation
   const updateItemMutation = useMutation({
     mutationFn: async (data: Record<string, any>) => {
       const { id } = data;
@@ -210,9 +195,8 @@ const DatabaseManager = ({ isAdmin }: DatabaseManagerProps) => {
     },
   });
 
-  // Create a type-safe create function for each table type
   const createExerciseTemplate = async (data: Partial<ExerciseTemplate>) => {
-    const newData: Partial<ExerciseTemplate> = {
+    const newData: ExerciseTemplate = {
       name: data.name || "New Exercise",
       description: data.description || "Description",
       target_muscle: data.target_muscle || "General",
@@ -227,11 +211,10 @@ const DatabaseManager = ({ isAdmin }: DatabaseManagerProps) => {
   };
   
   const createFoodLog = async (data: Partial<FoodLog>) => {
-    // Get current user ID
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("User not authenticated");
     
-    const newData: Partial<FoodLog> = {
+    const newData: FoodLog = {
       user_id: data.user_id || user.id,
       name: data.name || "New Food Item",
       calories: data.calories || 0,
@@ -248,11 +231,10 @@ const DatabaseManager = ({ isAdmin }: DatabaseManagerProps) => {
   };
   
   const createWorkout = async (data: Partial<Workout>) => {
-    // Get current user ID
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("User not authenticated");
     
-    const newData: Partial<Workout> = {
+    const newData: Workout = {
       user_id: data.user_id || user.id,
       title: data.title || "New Workout",
       duration: data.duration || 30,
@@ -265,11 +247,9 @@ const DatabaseManager = ({ isAdmin }: DatabaseManagerProps) => {
     if (error) throw error;
     return newData;
   };
-  
-  // Type-safe create item mutation
+
   const createItemMutation = useMutation({
     mutationFn: async (data: Record<string, any>) => {
-      // For profiles, we need to handle them differently since they link to auth users
       if (selectedTable === "profiles") {
         toast({
           variant: "destructive",
@@ -307,17 +287,14 @@ const DatabaseManager = ({ isAdmin }: DatabaseManagerProps) => {
     },
   });
 
-  // Handle edit button click
   const handleEditClick = (item: any) => {
     setCurrentItem(item);
     setEditFormData(item);
     setIsEditDialogOpen(true);
   };
 
-  // Handle create new item
   const handleCreateClick = () => {
     setCurrentItem(null);
-    // Initialize empty form data based on columns
     const emptyForm: Record<string, any> = {};
     tableColumns?.forEach(column => {
       if (column !== 'id' && column !== 'created_at' && column !== 'updated_at') {
@@ -328,7 +305,6 @@ const DatabaseManager = ({ isAdmin }: DatabaseManagerProps) => {
     setIsEditDialogOpen(true);
   };
 
-  // Handle form submit
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (currentItem) {
@@ -338,7 +314,6 @@ const DatabaseManager = ({ isAdmin }: DatabaseManagerProps) => {
     }
   };
 
-  // Handle form input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setEditFormData(prev => ({
@@ -357,7 +332,6 @@ const DatabaseManager = ({ isAdmin }: DatabaseManagerProps) => {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {/* Table Selection */}
           <div className="flex space-x-2 overflow-x-auto pb-2">
             {tables?.map(table => (
               <Button
@@ -371,7 +345,6 @@ const DatabaseManager = ({ isAdmin }: DatabaseManagerProps) => {
             ))}
           </div>
           
-          {/* Actions Bar */}
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-medium">{selectedTable}</h3>
             <Button onClick={handleCreateClick} className="flex items-center">
@@ -380,7 +353,6 @@ const DatabaseManager = ({ isAdmin }: DatabaseManagerProps) => {
             </Button>
           </div>
           
-          {/* Data Table */}
           {tableDataLoading ? (
             <div className="py-8 text-center">Loading table data...</div>
           ) : (
@@ -437,7 +409,6 @@ const DatabaseManager = ({ isAdmin }: DatabaseManagerProps) => {
         </div>
       </CardContent>
       
-      {/* Edit/Create Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
@@ -451,7 +422,6 @@ const DatabaseManager = ({ isAdmin }: DatabaseManagerProps) => {
           <form onSubmit={handleFormSubmit}>
             <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
               {tableColumns?.map(column => {
-                // Skip id and timestamps for editing
                 if (column === 'id' || column === 'created_at' || column === 'updated_at') {
                   return null;
                 }

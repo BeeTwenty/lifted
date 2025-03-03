@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { WorkoutCard } from "@/components/WorkoutCard";
 import { WorkoutStats } from "@/components/WorkoutStats";
@@ -11,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { CreateWorkoutDialog } from "@/components/CreateWorkoutDialog";
 import { WorkoutPlayer } from "@/components/WorkoutPlayer";
 import { NutritionStat } from "@/components/NutritionStat";
+import { WeightTracker } from "@/components/WeightTracker";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const Index = () => {
@@ -197,6 +197,10 @@ const Index = () => {
               />
             </div>
           </div>
+        </section>
+
+        <section className="py-4">
+          <WeightTracker />
         </section>
 
         <section className="py-4">
