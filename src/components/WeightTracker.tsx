@@ -15,11 +15,6 @@ interface WeightRecord {
   weight: number;
 }
 
-interface ProfileData {
-  height: number | null;
-  weight: number | null;
-}
-
 export const WeightTracker = () => {
   const [weightRecords, setWeightRecords] = useState<WeightRecord[]>([]);
   const [newWeight, setNewWeight] = useState<string>("");
@@ -67,7 +62,7 @@ export const WeightTracker = () => {
 
       const { data, error } = await supabase
         .from("profiles")
-        .select("height, weight")
+        .select("height")
         .eq("id", user.id)
         .single();
 
@@ -76,8 +71,8 @@ export const WeightTracker = () => {
       if (data) {
         if (data.height) setHeight(data.height.toString());
         // Calculate BMI if both height and weight are available
-        if (data.height && data.weight) {
-          calculateBMI(data.weight, data.height);
+        if (data.height && newWeight) {
+          calculateBMI(parseFloat(newWeight), data.height);
         }
       }
     } catch (error: any) {
@@ -123,7 +118,9 @@ export const WeightTracker = () => {
       // Update profile with latest weight
       const { error: profileError } = await supabase
         .from("profiles")
-        .update({ weight })
+        .update({ 
+          weight: weight // Now updating to the profiles table format
+        })
         .eq("id", user.id);
 
       if (profileError) throw profileError;
@@ -166,7 +163,9 @@ export const WeightTracker = () => {
 
       const { error } = await supabase
         .from("profiles")
-        .update({ height: heightValue })
+        .update({ 
+          height: heightValue 
+        })
         .eq("id", user.id);
 
       if (error) throw error;

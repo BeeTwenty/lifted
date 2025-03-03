@@ -1,11 +1,13 @@
-import { useState, useEffect, useRef } from "react";
+
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { ChevronLeft, ChevronRight, X, Save, CheckCircle, Timer } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { useQueryClient } from "@tanstack/react-query";
+import { Play, Pause, SkipForward, RotateCcw, CheckCircle, Timer } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 interface Exercise {
   id: string;
@@ -14,6 +16,14 @@ interface Exercise {
   reps: number;
   weight: number | null;
   notes: string | null;
+  rest_time: number | null;
+}
+
+interface Workout {
+  id: string;
+  title: string;
+  exercises: Exercise[];
+  default_rest_time: number;
 }
 
 interface WorkoutPlayerProps {
@@ -21,91 +31,70 @@ interface WorkoutPlayerProps {
   onClose: () => void;
 }
 
-export function WorkoutPlayer({ workoutId, onClose }: WorkoutPlayerProps) {
-  const [workout, setWorkout] = useState<any>(null);
-  const [exercises, setExercises] = useState<Exercise[]>([]);
+export const WorkoutPlayer = ({ workoutId, onClose }: WorkoutPlayerProps) => {
+  const [workout, setWorkout] = useState<Workout | null>(null);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [exerciseMedia, setExerciseMedia] = useState<string | null>(null);
-  const [editedSets, setEditedSets] = useState<number>(0);
-  const [editedReps, setEditedReps] = useState<number>(0);
-  const [editedWeight, setEditedWeight] = useState<number | null>(null);
-  const [isSaving, setSaving] = useState(false);
-  const [timer, setTimer] = useState<number>(0);
-  const [isActive, setIsActive] = useState<boolean>(false);
+  const [currentSetIndex, setCurrentSetIndex] = useState(0);
+  const [completed, setCompleted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [isResting, setIsResting] = useState(false);
+  const [restTimeRemaining, setRestTimeRemaining] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const intervalRef = useRef<number | null>(null);
-
-  const currentExercise = exercises[currentExerciseIndex];
 
   useEffect(() => {
     if (workoutId) {
-      fetchWorkoutDetails();
+      fetchWorkout(workoutId);
     }
   }, [workoutId]);
 
   useEffect(() => {
-    if (currentExercise) {
-      setEditedSets(currentExercise.sets);
-      setEditedReps(currentExercise.reps);
-      setEditedWeight(currentExercise.weight);
-    }
-  }, [currentExercise]);
-
-  useEffect(() => {
-    if (workout && !isActive) {
-      setIsActive(true);
-    }
-  }, [workout]);
-
-  useEffect(() => {
-    if (isActive) {
-      intervalRef.current = window.setInterval(() => {
-        setTimer((prevTimer) => prevTimer + 1);
+    let timer: NodeJS.Timeout;
+    
+    if (isResting && restTimeRemaining > 0 && !isPaused) {
+      timer = setTimeout(() => {
+        setRestTimeRemaining(prev => prev - 1);
       }, 1000);
-    } else if (intervalRef.current) {
-      window.clearInterval(intervalRef.current);
+    } else if (isResting && restTimeRemaining <= 0) {
+      setIsResting(false);
+      nextSet();
     }
     
-    return () => {
-      if (intervalRef.current) {
-        window.clearInterval(intervalRef.current);
-      }
-    };
-  }, [isActive]);
+    return () => clearTimeout(timer);
+  }, [isResting, restTimeRemaining, isPaused]);
 
-  const formatTime = (seconds: number): string => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
-
-  const fetchWorkoutDetails = async () => {
+  const fetchWorkout = async (id: string) => {
+    setLoading(true);
     try {
-      setLoading(true);
-      
       const { data: workoutData, error: workoutError } = await supabase
         .from("workouts")
-        .select("*")
-        .eq("id", workoutId)
+        .select("id, title, default_rest_time")
+        .eq("id", id)
         .single();
-      
+
       if (workoutError) throw workoutError;
-      setWorkout(workoutData);
-      
-      const { data: exerciseData, error: exercisesError } = await supabase
+
+      const { data: exercisesData, error: exercisesError } = await supabase
         .from("exercises")
         .select("*")
-        .eq("workout_id", workoutId)
+        .eq("workout_id", id)
         .order("id");
-      
+
       if (exercisesError) throw exercisesError;
-      setExercises(exerciseData as Exercise[]);
-      
-      if (exerciseData && exerciseData.length > 0) {
-        fetchExerciseMedia(exerciseData[0].name);
-      }
+
+      setWorkout({
+        id: workoutData.id,
+        title: workoutData.title,
+        exercises: exercisesData,
+        default_rest_time: workoutData.default_rest_time || 60
+      });
+
+      setCurrentExerciseIndex(0);
+      setCurrentSetIndex(0);
+      setCompleted(false);
+      setIsResting(false);
+      setRestTimeRemaining(0);
+      setIsPaused(false);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -117,281 +106,201 @@ export function WorkoutPlayer({ workoutId, onClose }: WorkoutPlayerProps) {
     }
   };
 
-  const fetchExerciseMedia = async (exerciseName: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("exercise_templates")
-        .select("media_url")
-        .ilike("name", exerciseName)
-        .single();
-      
-      if (error) throw error;
-      setExerciseMedia(data.media_url);
-    } catch (error) {
-      console.error("Error fetching exercise media:", error);
-      setExerciseMedia(null);
-    }
+  const handleComplete = async () => {
+    // Additional logic if needed for tracking workout completion
+    toast({
+      title: "Workout completed!",
+      description: "Great job completing your workout.",
+    });
+    onClose();
   };
 
-  const isYouTubeLink = (url: string): boolean => {
-    return url.includes("youtube.com") || url.includes("youtu.be");
-  };
+  const currentExercise = workout?.exercises[currentExerciseIndex];
+  const totalExercises = workout?.exercises.length || 0;
+  const totalSets = currentExercise?.sets || 0;
+  const progress = totalExercises > 0 
+    ? ((currentExerciseIndex / totalExercises) * 100) + 
+      ((currentSetIndex / totalSets) * (100 / totalExercises))
+    : 0;
 
-  const extractYouTubeID = (url: string): string | null => {
-    const regex = /(?:youtu\.be\/|youtube\.com\/(?:.*v=|.*\/|.*embed\/))([^"&?\/\s]{11})/;
-    const match = url.match(regex);
-    return match ? match[1] : null;
-  };
-
-  const handleNext = () => {
-    if (currentExerciseIndex < exercises.length - 1) {
-      saveCurrentExerciseChanges().then(() => {
-        setCurrentExerciseIndex(prev => prev + 1);
-        fetchExerciseMedia(exercises[currentExerciseIndex + 1].name);
-      });
-    }
-  };
-
-  const handlePrevious = () => {
-    if (currentExerciseIndex > 0) {
-      saveCurrentExerciseChanges().then(() => {
-        setCurrentExerciseIndex(prev => prev - 1);
-        fetchExerciseMedia(exercises[currentExerciseIndex - 1].name);
-      });
-    }
-  };
-
-  const saveCurrentExerciseChanges = async () => {
-    if (!currentExercise) return Promise.resolve();
+  const nextSet = () => {
+    if (!workout || !currentExercise) return;
     
-    if (
-      editedSets !== currentExercise.sets ||
-      editedReps !== currentExercise.reps ||
-      editedWeight !== currentExercise.weight
-    ) {
-      setSaving(true);
-      try {
-        const { error } = await supabase
-          .from("exercises")
-          .update({
-            sets: editedSets,
-            reps: editedReps,
-            weight: editedWeight
-          })
-          .eq("id", currentExercise.id);
-        
-        if (error) throw error;
-        
-        setExercises(exercises.map(ex => 
-          ex.id === currentExercise.id 
-            ? { ...ex, sets: editedSets, reps: editedReps, weight: editedWeight } 
-            : ex
-        ));
-        
-        toast({
-          title: "Exercise updated",
-          description: "Your changes have been saved.",
-        });
-      } catch (error: any) {
-        toast({
-          variant: "destructive",
-          title: "Error saving changes",
-          description: error.message,
-        });
-      } finally {
-        setSaving(false);
+    if (currentSetIndex < currentExercise.sets - 1) {
+      // Move to next set of current exercise
+      setCurrentSetIndex(currentSetIndex + 1);
+    } else {
+      // Move to next exercise
+      if (currentExerciseIndex < workout.exercises.length - 1) {
+        setCurrentExerciseIndex(currentExerciseIndex + 1);
+        setCurrentSetIndex(0);
+      } else {
+        // Workout completed
+        setCompleted(true);
       }
     }
+  };
+
+  const startRest = () => {
+    if (!workout || !currentExercise) return;
     
-    return Promise.resolve();
+    const restTime = currentExercise.rest_time || workout.default_rest_time || 60;
+    setRestTimeRemaining(restTime);
+    setIsResting(true);
+    setIsPaused(false);
   };
 
-  const handleSave = () => {
-    saveCurrentExerciseChanges();
+  const skipRest = () => {
+    setIsResting(false);
+    nextSet();
   };
 
-  const handleFinishWorkout = async () => {
-    try {
-      setSaving(true);
-      
-      await saveCurrentExerciseChanges();
-      
-      setIsActive(false);
-      
-      const durationInMinutes = Math.ceil(timer / 60);
-      
-      const { error } = await supabase
-        .from("workouts")
-        .update({ duration: durationInMinutes })
-        .eq("id", workoutId);
-      
-      if (error) throw error;
-      
-      queryClient.invalidateQueries({ queryKey: ["workoutStats"] });
-      queryClient.invalidateQueries({ queryKey: ["routines"] });
-      
-      toast({
-        title: "Workout completed",
-        description: `You finished the workout in ${formatTime(timer)}!`,
-      });
-      
-      onClose();
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error finishing workout",
-        description: error.message,
-      });
-    } finally {
-      setSaving(false);
-    }
+  const togglePause = () => {
+    setIsPaused(!isPaused);
   };
 
-  if (!workoutId) return null;
+  const resetWorkout = () => {
+    setCurrentExerciseIndex(0);
+    setCurrentSetIndex(0);
+    setCompleted(false);
+    setIsResting(false);
+    setRestTimeRemaining(0);
+    setIsPaused(false);
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
 
   return (
-    <Dialog open={!!workoutId} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={!!workoutId} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <span>{workout?.title || "Workout"}</span>
-            <div className="flex items-center gap-2 text-sm font-normal">
-              <Timer className="h-4 w-4" />
-              <span>{formatTime(timer)}</span>
-            </div>
-          </DialogTitle>
+          <DialogTitle>{workout?.title || "Workout"}</DialogTitle>
         </DialogHeader>
         
         {loading ? (
-          <div className="h-64 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <div className="py-10 text-center">Loading workout...</div>
+        ) : completed ? (
+          <div className="py-10 text-center space-y-4">
+            <CheckCircle className="mx-auto h-16 w-16 text-primary" />
+            <h2 className="text-2xl font-bold">Workout Complete!</h2>
+            <p className="text-muted-foreground">Congratulations on finishing your workout.</p>
+            <div className="pt-4">
+              <Button onClick={handleComplete}>Finish</Button>
+            </div>
           </div>
-        ) : exercises.length === 0 ? (
-          <div className="text-center py-10">
-            <p>No exercises found in this workout.</p>
+        ) : isResting ? (
+          <div className="py-6 space-y-6">
+            <div className="text-center space-y-2">
+              <h2 className="text-xl font-semibold">Rest Time</h2>
+              <div className="flex items-center justify-center space-x-2">
+                <Timer className="h-6 w-6 text-blue-500" />
+                <span className="text-3xl font-bold">{formatTime(restTimeRemaining)}</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Next: {currentExercise?.name} - Set {currentSetIndex + 1 >= currentExercise?.sets ? 1 : currentSetIndex + 2}
+                {currentSetIndex + 1 >= currentExercise?.sets && currentExerciseIndex < (workout?.exercises.length || 0) - 1 
+                  ? ` of ${workout?.exercises[currentExerciseIndex + 1].name}`
+                  : ''
+                }
+              </p>
+            </div>
+            
+            <div className="flex justify-center space-x-4">
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={togglePause}
+              >
+                {isPaused ? <Play className="h-5 w-5" /> : <Pause className="h-5 w-5" />}
+              </Button>
+              <Button onClick={skipRest}>
+                <SkipForward className="mr-2 h-4 w-4" />
+                Skip Rest
+              </Button>
+            </div>
           </div>
         ) : (
-          <div className="space-y-6">
-            <div className="text-center text-sm text-muted-foreground">
-              Exercise {currentExerciseIndex + 1} of {exercises.length}
-            </div>
-            
-            <div className="aspect-video bg-muted rounded-lg overflow-hidden">
-              {exerciseMedia ? (
-                isYouTubeLink(exerciseMedia) ? (
-                  <iframe 
-                    className="w-full h-full"
-                    src={`https://www.youtube.com/embed/${extractYouTubeID(exerciseMedia)}`}
-                    title="Exercise Video"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  ></iframe>
-                ) : (
-                  <img 
-                    src={exerciseMedia} 
-                    alt={currentExercise.name} 
-                    className="w-full h-full object-cover"
-                  />
-                )
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <p className="text-muted-foreground">No media available</p>
-                </div>
-              )}
-            </div>
+          <div className="py-6 space-y-6">
+            <Progress value={progress} className="h-2" />
             
             <div className="space-y-4">
-              <h2 className="text-2xl font-bold">{currentExercise.name}</h2>
+              <div className="text-center">
+                <h2 className="text-xl font-semibold">{currentExercise?.name}</h2>
+                <p className="text-muted-foreground">
+                  Exercise {currentExerciseIndex + 1}/{totalExercises}
+                </p>
+              </div>
               
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-1">
-                  <label htmlFor="edit-sets" className="text-sm font-medium">Sets</label>
-                  <Input
-                    id="edit-sets"
-                    type="number"
-                    value={editedSets}
-                    min={1}
-                    onChange={(e) => setEditedSets(parseInt(e.target.value) || 1)}
-                    className="w-full"
-                  />
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <div className="text-3xl font-bold">{currentExercise?.reps}</div>
+                  <div className="text-sm font-medium uppercase text-muted-foreground">Reps</div>
+                </CardContent>
+              </Card>
+              
+              <div className="flex justify-between items-center px-2">
+                <div className="text-center">
+                  <div className="text-lg font-medium">{currentSetIndex + 1}</div>
+                  <div className="text-xs text-muted-foreground">Current Set</div>
                 </div>
-                
-                <div className="space-y-1">
-                  <label htmlFor="edit-reps" className="text-sm font-medium">Reps</label>
-                  <Input
-                    id="edit-reps"
-                    type="number"
-                    value={editedReps}
-                    min={1}
-                    onChange={(e) => setEditedReps(parseInt(e.target.value) || 1)}
-                    className="w-full"
-                  />
+                <div className="h-2 w-2 bg-muted rounded-full"></div>
+                <div className="text-center">
+                  <div className="text-lg font-medium">{currentExercise?.sets}</div>
+                  <div className="text-xs text-muted-foreground">Total Sets</div>
                 </div>
-                
-                <div className="space-y-1">
-                  <label htmlFor="edit-weight" className="text-sm font-medium">Weight (kg)</label>
-                  <Input
-                    id="edit-weight"
-                    type="number"
-                    value={editedWeight || ""}
-                    min={0}
-                    placeholder="Optional"
-                    onChange={(e) => setEditedWeight(e.target.value ? parseFloat(e.target.value) : null)}
-                    className="w-full"
-                  />
+                <div className="h-2 w-2 bg-muted rounded-full"></div>
+                <div className="text-center">
+                  {currentExercise?.weight ? (
+                    <>
+                      <div className="text-lg font-medium">{currentExercise.weight}</div>
+                      <div className="text-xs text-muted-foreground">Weight (kg)</div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-lg font-medium">—</div>
+                      <div className="text-xs text-muted-foreground">No Weight</div>
+                    </>
+                  )}
                 </div>
               </div>
               
-              <Button 
-                className="w-full" 
-                onClick={handleSave}
-                disabled={isSaving}
-              >
-                <Save className="mr-2 h-4 w-4" />
-                Save Changes
-              </Button>
-              
-              {currentExercise.notes && (
-                <div className="bg-muted/50 p-4 rounded-lg">
-                  <h3 className="font-medium mb-2">Instructions:</h3>
-                  <p className="text-sm">{currentExercise.notes}</p>
+              {currentExercise?.notes && (
+                <div className="rounded-md bg-muted p-3 text-sm">
+                  <p className="font-medium">Notes:</p>
+                  <p>{currentExercise.notes}</p>
                 </div>
               )}
             </div>
             
-            <div className="flex justify-between">
-              <Button 
-                variant="outline"
-                onClick={handlePrevious}
-                disabled={currentExerciseIndex === 0}
-              >
-                <ChevronLeft className="mr-1" />
-                Previous
+            <div className="space-y-2">
+              <Button className="w-full" onClick={startRest}>
+                Complete Set & Rest ({formatTime(currentExercise?.rest_time || workout?.default_rest_time || 60)})
               </Button>
-              
-              {currentExerciseIndex === exercises.length - 1 ? (
+              <div className="flex space-x-2">
                 <Button 
-                  variant="default" 
-                  className="bg-green-600 hover:bg-green-700" 
-                  onClick={handleFinishWorkout}
-                  disabled={isSaving}
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={resetWorkout}
                 >
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Finish Workout
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Reset
                 </Button>
-              ) : (
                 <Button 
-                  onClick={handleNext}
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={onClose}
                 >
-                  Next
-                  <ChevronRight className="ml-1" />
+                  Cancel
                 </Button>
-              )}
+              </div>
             </div>
           </div>
         )}
       </DialogContent>
     </Dialog>
   );
-}
+};

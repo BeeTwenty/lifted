@@ -1,313 +1,399 @@
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useForm } from "react-hook-form";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ExerciseTemplateCard } from "./ExerciseTemplateCard";
-import { useQuery } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Dumbbell, Search } from "lucide-react";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useQueryClient } from "@tanstack/react-query";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
+import { Exercise, ExerciseTemplate } from "@/types/workout";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { v4 as uuidv4 } from "uuid";
+import { Slider } from "@/components/ui/slider";
 
-interface ExerciseTemplate {
-  id: string;
-  name: string;
-  description: string;
-  media_url: string;
-  target_muscle: string;
+interface ExerciseInputProps {
+  onAddExercise: (exercise: Exercise) => void;
+  defaultRestTime: number;
+  templates: ExerciseTemplate[];
 }
 
-interface SelectedExercise extends ExerciseTemplate {
-  sets: number;
-  reps: number;
-  weight: number | null;
-  rest_time: number; // In seconds
-}
-
-export function CreateWorkoutDialog() {
-  const [title, setTitle] = useState("");
+const ExerciseInput = ({ onAddExercise, defaultRestTime, templates }: ExerciseInputProps) => {
+  const [name, setName] = useState("");
+  const [sets, setSets] = useState("3");
+  const [reps, setReps] = useState("10");
+  const [weight, setWeight] = useState("");
+  const [notes, setNotes] = useState("");
+  const [restTime, setRestTime] = useState(defaultRestTime);
+  const [activeTab, setActiveTab] = useState("manual");
   const { toast } = useToast();
-  const [selectedExercises, setSelectedExercises] = useState<SelectedExercise[]>([]);
-  const [open, setOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [defaultRestTime, setDefaultRestTime] = useState(60); // Default rest time in seconds
 
-  const { data: exerciseTemplates, isLoading } = useQuery({
-    queryKey: ["exerciseTemplates"],
-    queryFn: async () => {
+  const handleAddExercise = () => {
+    if (!name) {
+      toast({
+        variant: "destructive",
+        title: "Exercise name required",
+        description: "Please enter a name for the exercise."
+      });
+      return;
+    }
+
+    if (!sets || !reps) {
+      toast({
+        variant: "destructive",
+        title: "Sets and reps required",
+        description: "Please specify sets and reps for the exercise."
+      });
+      return;
+    }
+
+    const exercise: Exercise = {
+      id: uuidv4(),
+      name,
+      sets: parseInt(sets),
+      reps: parseInt(reps),
+      weight: weight ? parseFloat(weight) : null,
+      notes: notes || null,
+      rest_time: restTime,
+    };
+
+    onAddExercise(exercise);
+
+    // Reset form
+    setName("");
+    setSets("3");
+    setReps("10");
+    setWeight("");
+    setNotes("");
+  };
+
+  const handleSelectTemplate = (template: ExerciseTemplate) => {
+    setName(template.name);
+    setActiveTab("manual");
+  };
+
+  return (
+    <Tabs defaultValue="manual" value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="manual">Manual Entry</TabsTrigger>
+        <TabsTrigger value="templates">Templates</TabsTrigger>
+      </TabsList>
+      <TabsContent value="manual" className="mt-4 space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Exercise Name</Label>
+            <Input
+              id="name"
+              placeholder="e.g., Bench Press"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-2">
+              <Label htmlFor="sets">Sets</Label>
+              <Input
+                id="sets"
+                type="number"
+                placeholder="3"
+                value={sets}
+                onChange={(e) => setSets(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reps">Reps</Label>
+              <Input
+                id="reps"
+                type="number"
+                placeholder="10"
+                value={reps}
+                onChange={(e) => setReps(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="weight">Weight (kg, optional)</Label>
+            <Input
+              id="weight"
+              type="number"
+              placeholder="e.g., 60"
+              value={weight}
+              onChange={(e) => setWeight(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="rest-time">Rest Time ({restTime} seconds)</Label>
+            <Slider 
+              id="rest-time"
+              min={10} 
+              max={180} 
+              step={5} 
+              defaultValue={[defaultRestTime]} 
+              value={[restTime]}
+              onValueChange={(value) => setRestTime(value[0])}
+            />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="notes">Notes (optional)</Label>
+          <Textarea
+            id="notes"
+            placeholder="Any additional notes..."
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </div>
+        <Button type="button" onClick={handleAddExercise} className="w-full">
+          Add Exercise
+        </Button>
+      </TabsContent>
+      <TabsContent value="templates" className="mt-4">
+        <ScrollArea className="h-[300px] pr-4">
+          <div className="grid grid-cols-1 gap-2">
+            {templates.map((template) => (
+              <Card key={template.id} className="cursor-pointer hover:bg-accent/20" onClick={() => handleSelectTemplate(template)}>
+                <CardContent className="p-3">
+                  <div className="font-medium">{template.name}</div>
+                  <div className="text-sm text-muted-foreground">{template.target_muscle}</div>
+                </CardContent>
+              </Card>
+            ))}
+            {templates.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                No exercise templates found
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+      </TabsContent>
+    </Tabs>
+  );
+};
+
+export const CreateWorkoutDialog = () => {
+  const [open, setOpen] = useState(false);
+  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [templates, setTemplates] = useState<ExerciseTemplate[]>([]);
+  const [defaultRestTime, setDefaultRestTime] = useState(60);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { register, handleSubmit, reset, formState: { errors } } = useForm({
+    defaultValues: {
+      title: "",
+      duration: "30",
+      notes: "",
+    }
+  });
+
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen);
+    if (newOpen) {
+      fetchExerciseTemplates();
+      reset();
+      setExercises([]);
+      setDefaultRestTime(60);
+    }
+  };
+
+  const fetchExerciseTemplates = async () => {
+    try {
       const { data, error } = await supabase
         .from("exercise_templates")
         .select("*")
         .order("name");
-
+      
       if (error) throw error;
-      return data as ExerciseTemplate[];
-    },
-  });
+      setTemplates(data || []);
+    } catch (error: any) {
+      console.error("Error fetching exercise templates:", error.message);
+    }
+  };
 
-  const filteredExercises = exerciseTemplates?.filter(exercise => {
-    if (!searchQuery) return false; // Don't show anything if no search
-    
-    const lowerCaseSearch = searchQuery.toLowerCase();
-    return (
-      exercise.name.toLowerCase().includes(lowerCaseSearch) ||
-      exercise.target_muscle.toLowerCase().includes(lowerCaseSearch) ||
-      exercise.description.toLowerCase().includes(lowerCaseSearch)
-    );
-  });
+  const handleRemoveExercise = (id: string) => {
+    setExercises(exercises.filter(exercise => exercise.id !== id));
+  };
 
-  const handleCreateWorkout = async () => {
+  const onSubmit = async (data: any) => {
+    if (exercises.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Add exercises",
+        description: "Your workout needs at least one exercise."
+      });
+      return;
+    }
+
+    setLoading(true);
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("User not found");
+      if (!user) throw new Error("User not authenticated");
 
-      // Create workout
-      const { data: workout, error: workoutError } = await supabase
+      // Create the workout
+      const { data: workoutData, error: workoutError } = await supabase
         .from("workouts")
         .insert({
-          title,
+          title: data.title,
+          duration: parseInt(data.duration),
+          notes: data.notes || null,
           user_id: user.id,
-          duration: 0, // This will be updated as exercises are completed
-          default_rest_time: defaultRestTime, // Store default rest time for the workout
+          default_rest_time: defaultRestTime
         })
         .select()
         .single();
 
       if (workoutError) throw workoutError;
 
-      // Add exercises to workout with customized sets, reps, weight, and rest time
-      const exercisesData = selectedExercises.map(exercise => ({
-        workout_id: workout.id,
-        name: exercise.name,
-        sets: exercise.sets,
-        reps: exercise.reps,
-        weight: exercise.weight,
-        notes: exercise.description,
-        rest_time: exercise.rest_time, // Store the rest time for each exercise
+      // Add all exercises
+      const exercisesWithWorkoutId = exercises.map(exercise => ({
+        ...exercise,
+        workout_id: workoutData.id
       }));
 
       const { error: exercisesError } = await supabase
         .from("exercises")
-        .insert(exercisesData);
+        .insert(exercisesWithWorkoutId);
 
       if (exercisesError) throw exercisesError;
 
       toast({
-        title: "Routine created",
-        description: "Your new workout routine has been created successfully.",
+        title: "Workout created",
+        description: "Your workout has been created successfully."
       });
 
-      setTitle("");
-      setSelectedExercises([]);
-      setSearchQuery("");
+      queryClient.invalidateQueries({ queryKey: ["routines"] });
+      queryClient.invalidateQueries({ queryKey: ["workoutStats"] });
+      
       setOpen(false);
+      reset();
+      setExercises([]);
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Error creating routine",
-        description: error.message,
+        title: "Error creating workout",
+        description: error.message
       });
+    } finally {
+      setLoading(false);
     }
-  };
-
-  const formatRestTime = (seconds: number): string => {
-    if (seconds < 60) {
-      return `${seconds} sec`;
-    } else {
-      const minutes = Math.floor(seconds / 60);
-      const remainingSeconds = seconds % 60;
-      return remainingSeconds > 0 
-        ? `${minutes} min ${remainingSeconds} sec` 
-        : `${minutes} min`;
-    }
-  };
-
-  const updateExerciseRestTime = (id: string, rest_time: number) => {
-    setSelectedExercises(prev => 
-      prev.map(exercise => 
-        exercise.id === id ? { ...exercise, rest_time } : exercise
-      )
-    );
-  };
-
-  const handleUpdateAllRestTimes = () => {
-    setSelectedExercises(prev => 
-      prev.map(exercise => ({ ...exercise, rest_time: defaultRestTime }))
-    );
-    toast({
-      title: "Rest times updated",
-      description: "Applied the default rest time to all exercises."
-    });
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button className="bg-accent hover:bg-accent/90">
-          <Dumbbell className="mr-2 h-4 w-4" />
-          New Routine
+        <Button>
+          <Plus className="mr-2 h-4 w-4" />
+          Create Routine
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Create New Routine</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-6">
-          <div>
-            <Input
-              placeholder="Routine Title (e.g., Upper Body, Leg Day)"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="default-rest-time">Default Rest Time Between Sets</Label>
-            <div className="flex items-center gap-4">
-              <Select
-                value={defaultRestTime.toString()}
-                onValueChange={(value) => setDefaultRestTime(parseInt(value))}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Select rest time" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="30">30 seconds</SelectItem>
-                  <SelectItem value="45">45 seconds</SelectItem>
-                  <SelectItem value="60">1 minute</SelectItem>
-                  <SelectItem value="90">1.5 minutes</SelectItem>
-                  <SelectItem value="120">2 minutes</SelectItem>
-                  <SelectItem value="180">3 minutes</SelectItem>
-                  <SelectItem value="300">5 minutes</SelectItem>
-                </SelectContent>
-              </Select>
-              {selectedExercises.length > 0 && (
-                <Button variant="outline" onClick={handleUpdateAllRestTimes}>
-                  Apply to all exercises
-                </Button>
-              )}
-            </div>
-          </div>
-          
-          {selectedExercises.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="font-medium">Selected Exercises</h3>
+      <DialogContent className="sm:max-w-[600px]">
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <DialogHeader>
+            <DialogTitle>Create New Workout Routine</DialogTitle>
+            <DialogDescription>
+              Design a custom workout routine with the exercises you want.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                {selectedExercises.map((exercise) => (
-                  <div key={exercise.id} className="flex flex-col p-3 bg-muted rounded-md">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <span className="font-medium">{exercise.name}</span>
-                        <div className="text-sm text-muted-foreground">
-                          {exercise.sets} sets × {exercise.reps} reps
-                          {exercise.weight ? ` × ${exercise.weight}kg` : ''}
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedExercises(prev => prev.filter(e => e.id !== exercise.id))}
-                      >
-                        Remove
-                      </Button>
-                    </div>
-                    <div className="mt-2">
-                      <Label htmlFor={`rest-time-${exercise.id}`} className="text-sm">
-                        Rest time between sets: {formatRestTime(exercise.rest_time)}
-                      </Label>
-                      <Select
-                        value={exercise.rest_time.toString()}
-                        onValueChange={(value) => updateExerciseRestTime(exercise.id, parseInt(value))}
-                      >
-                        <SelectTrigger className="w-full mt-1">
-                          <SelectValue placeholder="Select rest time" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="30">30 seconds</SelectItem>
-                          <SelectItem value="45">45 seconds</SelectItem>
-                          <SelectItem value="60">1 minute</SelectItem>
-                          <SelectItem value="90">1.5 minutes</SelectItem>
-                          <SelectItem value="120">2 minutes</SelectItem>
-                          <SelectItem value="180">3 minutes</SelectItem>
-                          <SelectItem value="300">5 minutes</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                ))}
+                <Label htmlFor="title">Workout Title</Label>
+                <Input
+                  id="title"
+                  {...register("title", { required: "Title is required" })}
+                  placeholder="e.g., Upper Body Workout"
+                />
+                {errors.title && (
+                  <p className="text-sm text-destructive">{errors.title.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="duration">Duration (minutes)</Label>
+                <Input
+                  id="duration"
+                  type="number"
+                  {...register("duration", { required: "Duration is required" })}
+                  placeholder="30"
+                />
+                {errors.duration && (
+                  <p className="text-sm text-destructive">{errors.duration.message}</p>
+                )}
               </div>
             </div>
-          )}
-
-          <div className="space-y-2">
-            <h3 className="font-medium">Search For Exercises</h3>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Search by name, muscle group, or description..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+            
+            <div className="space-y-2">
+              <Label htmlFor="default-rest">Default Rest Time Between Sets ({defaultRestTime} seconds)</Label>
+              <Slider 
+                id="default-rest"
+                min={10} 
+                max={180} 
+                step={5} 
+                defaultValue={[60]} 
+                value={[defaultRestTime]}
+                onValueChange={(value) => setDefaultRestTime(value[0])}
               />
             </div>
 
-            {isLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                {[1, 2].map((i) => (
-                  <div key={i} className="h-64 bg-muted animate-pulse rounded-lg" />
-                ))}
-              </div>
-            ) : searchQuery ? (
-              filteredExercises && filteredExercises.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  {filteredExercises.map((template) => (
-                    <ExerciseTemplateCard
-                      key={template.id}
-                      name={template.name}
-                      description={template.description}
-                      mediaUrl={template.media_url}
-                      targetMuscle={template.target_muscle}
-                      onAdd={(sets, reps, weight) => {
-                        if (!selectedExercises.find(e => e.id === template.id)) {
-                          setSelectedExercises(prev => [...prev, {
-                            ...template,
-                            sets,
-                            reps,
-                            weight,
-                            rest_time: defaultRestTime // Use the default rest time
-                          }]);
-                        }
-                      }}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500 mt-4">
-                  No exercises found matching "{searchQuery}". Try a different search.
-                </div>
-              )
-            ) : (
-              <div className="text-center py-8 text-gray-500 mt-4">
-                Enter a search term to find exercises
-              </div>
-            )}
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes (optional)</Label>
+              <Textarea
+                id="notes"
+                {...register("notes")}
+                placeholder="Any additional notes about the workout..."
+              />
+            </div>
 
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleCreateWorkout}
-              disabled={!title || selectedExercises.length === 0}
-            >
-              Create Routine
-            </Button>
+            <div className="space-y-4">
+              <h3 className="font-semibold">Exercises</h3>
+              <div className="rounded-md border p-4">
+                <ExerciseInput onAddExercise={(exercise) => setExercises([...exercises, exercise])} defaultRestTime={defaultRestTime} templates={templates} />
+              </div>
+              
+              {exercises.length > 0 && (
+                <div className="space-y-2 mt-4">
+                  <h4 className="text-sm font-medium">Added Exercises</h4>
+                  <ul className="space-y-2">
+                    {exercises.map((exercise, index) => (
+                      <li key={exercise.id} className="flex justify-between items-center p-3 rounded-md border">
+                        <div>
+                          <div className="font-medium">{exercise.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {exercise.sets} sets × {exercise.reps} reps
+                            {exercise.weight && ` @ ${exercise.weight} kg`}
+                            {exercise.rest_time && ` | Rest: ${exercise.rest_time}s`}
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveExercise(exercise.id)}
+                        >
+                          Remove
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+          <DialogFooter>
+            <Button type="submit" disabled={loading}>
+              {loading ? "Creating..." : "Create Workout"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
-}
+};

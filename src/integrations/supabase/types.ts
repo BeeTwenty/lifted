@@ -60,6 +60,7 @@ export type Database = {
           name: string
           notes: string | null
           reps: number
+          rest_time: number | null
           sets: number
           weight: number | null
           workout_id: string
@@ -69,6 +70,7 @@ export type Database = {
           name: string
           notes?: string | null
           reps: number
+          rest_time?: number | null
           sets: number
           weight?: number | null
           workout_id: string
@@ -78,6 +80,7 @@ export type Database = {
           name?: string
           notes?: string | null
           reps?: number
+          rest_time?: number | null
           sets?: number
           weight?: number | null
           workout_id?: string
@@ -141,6 +144,7 @@ export type Database = {
           avatar_url: string | null
           daily_calories: number | null
           full_name: string | null
+          height: number | null
           hour_goal: number | null
           id: string
           updated_at: string
@@ -151,6 +155,7 @@ export type Database = {
           avatar_url?: string | null
           daily_calories?: number | null
           full_name?: string | null
+          height?: number | null
           hour_goal?: number | null
           id: string
           updated_at?: string
@@ -161,6 +166,7 @@ export type Database = {
           avatar_url?: string | null
           daily_calories?: number | null
           full_name?: string | null
+          height?: number | null
           hour_goal?: number | null
           id?: string
           updated_at?: string
@@ -169,9 +175,34 @@ export type Database = {
         }
         Relationships: []
       }
+      weight_records: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          user_id: string
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          id?: string
+          user_id: string
+          weight: number
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          user_id?: string
+          weight?: number
+        }
+        Relationships: []
+      }
       workouts: {
         Row: {
           created_at: string
+          default_rest_time: number | null
           duration: number
           id: string
           notes: string | null
@@ -180,6 +211,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          default_rest_time?: number | null
           duration: number
           id?: string
           notes?: string | null
@@ -188,6 +220,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          default_rest_time?: number | null
           duration?: number
           id?: string
           notes?: string | null
