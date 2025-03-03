@@ -1,11 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { Home } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { CalorieCalculator } from "@/components/CalorieCalculator";
 import { FoodTracker } from "@/components/FoodTracker";
 
 const Nutrition = () => {
@@ -42,34 +40,6 @@ const Nutrition = () => {
     }
   };
 
-  const handleCalculate = async (calories: number) => {
-    try {
-      setDailyCalories(calories);
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("User not found");
-
-      // Update user's daily calorie target
-      const { error } = await supabase
-        .from("profiles")
-        .update({ daily_calories: calories })
-        .eq("id", user.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Calorie target updated",
-        description: `Your daily calorie target is now ${calories} calories.`,
-      });
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error saving calorie target",
-        description: error.message,
-      });
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-50/50">
       <div className="container py-8 space-y-8">
@@ -90,11 +60,9 @@ const Nutrition = () => {
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="h-96 bg-gray-100 animate-pulse rounded-lg" />
-            <div className="h-96 bg-gray-100 animate-pulse rounded-lg" />
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <CalorieCalculator onCalculate={handleCalculate} />
             <FoodTracker dailyCalories={dailyCalories} />
           </div>
         )}

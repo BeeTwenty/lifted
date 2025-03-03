@@ -8,19 +8,21 @@ import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { ArrowLeft, Save } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { CalorieCalculator } from "@/components/CalorieCalculator"; // Import Calorie Calculator
 
 const Settings = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [isLoading, setIsLoading] = useState(false);
+  const [showCalorieCalculator, setShowCalorieCalculator] = useState(false);
+
   const [formData, setFormData] = useState({
     fullName: "",
     username: "",
-    dailyCalories: 0,
+    dailyCalories: 2000,
     workoutGoal: 5,
     hourGoal: 10,
-    height: 170, // Added height field
+    height: 170,
   });
 
   // Fetch user profile data
@@ -32,7 +34,7 @@ const Settings = () => {
 
       const { data, error } = await supabase
         .from("profiles")
-        .select("full_name, username, daily_calories, workout_goal, hour_goal, height") // Include height
+        .select("full_name, username, daily_calories, workout_goal, hour_goal, height")
         .eq("id", user.id)
         .single();
 
@@ -50,17 +52,17 @@ const Settings = () => {
         dailyCalories: profile.daily_calories || 2000,
         workoutGoal: profile.workout_goal || 5,
         hourGoal: profile.hour_goal || 10,
-        height: profile.height || 170, // Set height if available
+        height: profile.height || 170,
       });
     }
   }, [profile]);
 
-  // Update profile mutation
+  // Function to handle saving settings
   const updateProfileMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
-      
+
       const { error } = await supabase
         .from("profiles")
         .update({
@@ -69,17 +71,15 @@ const Settings = () => {
           daily_calories: data.dailyCalories,
           workout_goal: data.workoutGoal,
           hour_goal: data.hourGoal,
-          height: data.height, // Update height
+          height: data.height,
         })
         .eq("id", user.id);
-      
+
       if (error) throw error;
       return true;
     },
     onSuccess: () => {
-      // Invalidate relevant queries and show success message
       queryClient.invalidateQueries({ queryKey: ["userProfile"] });
-      queryClient.invalidateQueries({ queryKey: ["workoutStats"] });
       toast({
         title: "Settings updated",
         description: "Your profile settings have been updated successfully."
@@ -130,7 +130,7 @@ const Settings = () => {
                   placeholder="Your full name"
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="username">Username</Label>
                 <Input
@@ -140,7 +140,7 @@ const Settings = () => {
                   placeholder="Your username"
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="dailyCalories">Daily Calorie Target</Label>
                 <Input
@@ -168,9 +168,6 @@ const Settings = () => {
                   min="1"
                   max="30"
                 />
-                <p className="text-sm text-muted-foreground">
-                  Set your target number of workouts per week
-                </p>
               </div>
 
               <div className="space-y-2">
@@ -184,12 +181,8 @@ const Settings = () => {
                   min="1"
                   max="50"
                 />
-                <p className="text-sm text-muted-foreground">
-                  Set your target hours of exercise per week
-                </p>
               </div>
 
-              {/* New Height Input */}
               <div className="space-y-2">
                 <Label htmlFor="height">Height (cm)</Label>
                 <Input
@@ -201,17 +194,27 @@ const Settings = () => {
                   min="50"
                   max="250"
                 />
-                <p className="text-sm text-muted-foreground">
-                  Enter your height in centimeters
-                </p>
+              </div>
+
+              {/* Toggle Calorie Calculator */}
+              <div className="space-y-2">
+                <Button variant="outline" onClick={() => setShowCalorieCalculator(!showCalorieCalculator)}>
+                  {showCalorieCalculator ? "Hide" : "Show"} Calorie Calculator
+                </Button>
+
+                {showCalorieCalculator && (
+                  <div className="mt-4 p-4 border rounded-lg">
+                    <CalorieCalculator onCalculate={(calories: number) => {
+                      setFormData(prev => ({ ...prev, dailyCalories: calories }));
+                    }} />
+                  </div>
+                )}
               </div>
             </CardContent>
-            
+
+            {/* Save Button (Always Visible) */}
             <CardFooter className="flex justify-end">
-              <Button 
-                type="submit" 
-                disabled={updateProfileMutation.isPending}
-              >
+              <Button type="submit" disabled={updateProfileMutation.isPending}>
                 {updateProfileMutation.isPending ? "Saving..." : "Save Settings"}
                 <Save className="ml-2 h-4 w-4" />
               </Button>
