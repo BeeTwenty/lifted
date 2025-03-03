@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine, ResponsiveContainer } from "recharts";
@@ -8,12 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { format, parseISO, subMonths } from "date-fns";
-
-interface WeightRecord {
-  id: string;
-  date: string;
-  weight: number;
-}
+import { WeightRecord } from "@/types/workout";
 
 export const WeightTracker = () => {
   const [weightRecords, setWeightRecords] = useState<WeightRecord[]>([]);
@@ -68,10 +62,11 @@ export const WeightTracker = () => {
 
       if (error && error.code !== "PGRST116") throw error;
       
-      if (data) {
-        if (data.height) setHeight(data.height.toString());
+      if (data && data.height) {
+        setHeight(data.height.toString());
+        
         // Calculate BMI if both height and weight are available
-        if (data.height && newWeight) {
+        if (newWeight) {
           calculateBMI(parseFloat(newWeight), data.height);
         }
       }
@@ -115,16 +110,8 @@ export const WeightTracker = () => {
 
       if (recordError) throw recordError;
 
-      // Update profile with latest weight
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({ 
-          weight: weight // Now updating to the profiles table format
-        })
-        .eq("id", user.id);
-
-      if (profileError) throw profileError;
-
+      // No need to update profile's weight as it's not in the schema
+      
       // Update BMI if height is available
       if (height) {
         calculateBMI(weight, parseFloat(height));
@@ -140,49 +127,6 @@ export const WeightTracker = () => {
       toast({
         variant: "destructive",
         title: "Error recording weight",
-        description: error.message,
-      });
-    }
-  };
-
-  const handleUpdateHeight = async () => {
-    if (!height) {
-      toast({
-        variant: "destructive",
-        title: "Height required",
-        description: "Please enter your height.",
-      });
-      return;
-    }
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("User not authenticated");
-
-      const heightValue = parseFloat(height);
-
-      const { error } = await supabase
-        .from("profiles")
-        .update({ 
-          height: heightValue 
-        })
-        .eq("id", user.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Height updated",
-        description: "Your height has been successfully updated.",
-      });
-
-      // Update BMI if weight is available
-      if (newWeight) {
-        calculateBMI(parseFloat(newWeight), heightValue);
-      }
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error updating height",
         description: error.message,
       });
     }
@@ -208,6 +152,16 @@ export const WeightTracker = () => {
     weight: record.weight,
   }));
 
+  // Calculate BMI threshold weights for the current height
+  const getBmiThresholdWeight = (bmiThreshold: number): number | null => {
+    if (!height) return null;
+    const heightInMeters = parseFloat(height) / 100;
+    return parseFloat((bmiThreshold * heightInMeters * heightInMeters).toFixed(1));
+  };
+
+  const underweightThreshold = getBmiThresholdWeight(18.5);
+  const overweightThreshold = getBmiThresholdWeight(25);
+
   return (
     <Card>
       <CardHeader>
@@ -222,7 +176,7 @@ export const WeightTracker = () => {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="weight">Current Weight (kg)</Label>
                     <div className="flex space-x-2">
@@ -235,34 +189,28 @@ export const WeightTracker = () => {
                       />
                       <Button onClick={handleAddWeight}>Save</Button>
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="height">Height (cm)</Label>
-                    <div className="flex space-x-2">
-                      <Input
-                        id="height"
-                        type="number"
-                        placeholder="Enter height in cm"
-                        value={height}
-                        onChange={(e) => setHeight(e.target.value)}
-                      />
-                      <Button onClick={handleUpdateHeight}>Update</Button>
-                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Your height can be updated in the settings page
+                    </p>
                   </div>
                 </div>
 
-                {bmi !== null && (
+                {(height && newWeight) && (
                   <div className="mt-4 p-4 border rounded-md bg-slate-50">
                     <div className="flex justify-between items-center">
                       <div>
                         <h3 className="font-semibold">Your BMI</h3>
                         <div className="flex items-baseline space-x-2">
-                          <span className="text-3xl font-bold" style={{ color: getBmiCategoryColor(bmi) }}>{bmi}</span>
+                          <span className="text-3xl font-bold" style={{ color: bmi ? getBmiCategoryColor(bmi) : "inherit" }}>
+                            {bmi?.toFixed(1) || "N/A"}
+                          </span>
                           <span className="text-sm text-muted-foreground">kg/m²</span>
                         </div>
-                        <p className="text-sm font-medium" style={{ color: getBmiCategoryColor(bmi) }}>
-                          {getBmiCategory(bmi)}
-                        </p>
+                        {bmi && (
+                          <p className="text-sm font-medium" style={{ color: getBmiCategoryColor(bmi) }}>
+                            {getBmiCategory(bmi)}
+                          </p>
+                        )}
                       </div>
                       <div className="text-xs text-muted-foreground">
                         <div>Underweight: &lt;18.5</div>
@@ -296,20 +244,26 @@ export const WeightTracker = () => {
                         stroke="#8884d8" 
                         activeDot={{ r: 8 }} 
                       />
-                      {height && bmi && (
+                      
+                      {/* Always show BMI threshold lines if height is available */}
+                      {height && (
                         <>
-                          <ReferenceLine 
-                            y={(18.5 * (parseFloat(height) / 100) * (parseFloat(height) / 100)).toFixed(1)} 
-                            stroke="#3b82f6" 
-                            strokeDasharray="3 3" 
-                            label={{ value: "Underweight", position: "insideTopLeft", fill: "#3b82f6" }} 
-                          />
-                          <ReferenceLine 
-                            y={(25 * (parseFloat(height) / 100) * (parseFloat(height) / 100)).toFixed(1)} 
-                            stroke="#f59e0b" 
-                            strokeDasharray="3 3" 
-                            label={{ value: "Overweight", position: "insideTopLeft", fill: "#f59e0b" }} 
-                          />
+                          {underweightThreshold && (
+                            <ReferenceLine 
+                              y={underweightThreshold} 
+                              stroke="#3b82f6" 
+                              strokeDasharray="3 3" 
+                              label={{ value: "Underweight", position: "insideTopLeft", fill: "#3b82f6" }} 
+                            />
+                          )}
+                          {overweightThreshold && (
+                            <ReferenceLine 
+                              y={overweightThreshold} 
+                              stroke="#f59e0b" 
+                              strokeDasharray="3 3" 
+                              label={{ value: "Overweight", position: "insideTopLeft", fill: "#f59e0b" }} 
+                            />
+                          )}
                         </>
                       )}
                     </LineChart>
@@ -319,6 +273,14 @@ export const WeightTracker = () => {
                     <div className="text-muted-foreground">
                       <p>No weight data recorded yet.</p>
                       <p className="text-sm">Add your weight to see the chart.</p>
+                      {height && (
+                        <p className="mt-4 text-sm">
+                          <span className="block font-medium">BMI Reference:</span>
+                          {underweightThreshold && <span className="block text-blue-500">Underweight: Below {underweightThreshold} kg</span>}
+                          {underweightThreshold && overweightThreshold && <span className="block text-green-600">Normal: {underweightThreshold}-{overweightThreshold} kg</span>}
+                          {overweightThreshold && <span className="block text-amber-500">Overweight: Above {overweightThreshold} kg</span>}
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
