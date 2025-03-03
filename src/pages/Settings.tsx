@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +20,7 @@ const Settings = () => {
     dailyCalories: 0,
     workoutGoal: 5,
     hourGoal: 10,
+    height: 170, // Added height field
   });
 
   // Fetch user profile data
@@ -32,7 +32,7 @@ const Settings = () => {
 
       const { data, error } = await supabase
         .from("profiles")
-        .select("full_name, username, daily_calories, workout_goal, hour_goal")
+        .select("full_name, username, daily_calories, workout_goal, hour_goal, height") // Include height
         .eq("id", user.id)
         .single();
 
@@ -50,6 +50,7 @@ const Settings = () => {
         dailyCalories: profile.daily_calories || 2000,
         workoutGoal: profile.workout_goal || 5,
         hourGoal: profile.hour_goal || 10,
+        height: profile.height || 170, // Set height if available
       });
     }
   }, [profile]);
@@ -68,6 +69,7 @@ const Settings = () => {
           daily_calories: data.dailyCalories,
           workout_goal: data.workoutGoal,
           hour_goal: data.hourGoal,
+          height: data.height, // Update height
         })
         .eq("id", user.id);
       
@@ -184,6 +186,23 @@ const Settings = () => {
                 />
                 <p className="text-sm text-muted-foreground">
                   Set your target hours of exercise per week
+                </p>
+              </div>
+
+              {/* New Height Input */}
+              <div className="space-y-2">
+                <Label htmlFor="height">Height (cm)</Label>
+                <Input
+                  id="height"
+                  type="number"
+                  value={formData.height}
+                  onChange={(e) => setFormData({ ...formData, height: Number(e.target.value) })}
+                  placeholder="170"
+                  min="50"
+                  max="250"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Enter your height in centimeters
                 </p>
               </div>
             </CardContent>

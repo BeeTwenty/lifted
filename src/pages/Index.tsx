@@ -199,9 +199,7 @@ const Index = () => {
           </div>
         </section>
 
-        <section className="py-4">
-          <WeightTracker />
-        </section>
+      
 
         <section className="py-4">
           <h2 className="text-2xl font-semibold mb-4">Routines</h2>
@@ -227,6 +225,10 @@ const Index = () => {
               </div>
             )}
           </div>
+        </section>
+
+        <section className="py-4">
+          <WeightTracker />
         </section>
 
         <WorkoutPlayer 
