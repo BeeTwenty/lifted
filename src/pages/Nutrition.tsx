@@ -62,7 +62,7 @@ const Nutrition = () => {
             <div className="h-96 bg-gray-100 animate-pulse rounded-lg" />
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="">
             <FoodTracker dailyCalories={dailyCalories} />
           </div>
         )}
