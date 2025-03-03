@@ -203,40 +203,25 @@ export const WorkoutPlayer = ({ workoutId, onClose }: WorkoutPlayerProps) => {
     const secs = seconds % 60;
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
+  
 
   const renderMediaContent = () => {
     const mediaUrl = currentExercise?.media_url;
-    
-    if (!mediaUrl) {
+  
+    if (!mediaUrl || mediaUrl.includes("fakeimg.pl")) {
       return (
         <div className="py-10 text-center">
-          <p className="text-muted-foreground">No media available for this exercise.</p>
+          <img 
+            src="https://fakeimg.pl/600x400/b36666/ffffff?text=No+Media&font=bebas" 
+            alt="No Media Available"
+            className="rounded-md w-full h-auto mx-auto"
+          />
         </div>
       );
     }
-    
-    if (mediaUrl.match(/\.(jpeg|jpg|gif|png)$/i)) {
-      return (
-        <AspectRatio ratio={16 / 9} className="bg-muted">
-          <img 
-            src={mediaUrl} 
-            alt={currentExercise?.name || "Exercise demonstration"} 
-            className="rounded-md object-cover w-full h-full"
-          />
-        </AspectRatio>
-      );
-    } else if (mediaUrl.match(/\.(mp4|webm|ogg)$/i)) {
-      return (
-        <AspectRatio ratio={16 / 9} className="bg-muted">
-          <video 
-            src={mediaUrl}
-            controls
-            className="rounded-md object-cover w-full h-full"
-          />
-        </AspectRatio>
-      );
-    } else if (mediaUrl.includes("youtube.com") || mediaUrl.includes("youtu.be")) {
-      // Convert to embedded YouTube URL if needed
+  
+    // Handle YouTube videos
+    if (mediaUrl.includes("youtube.com") || mediaUrl.includes("youtu.be")) {
       let embedUrl = mediaUrl;
       if (mediaUrl.includes("watch?v=")) {
         const videoId = mediaUrl.split("watch?v=")[1].split("&")[0];
@@ -245,7 +230,7 @@ export const WorkoutPlayer = ({ workoutId, onClose }: WorkoutPlayerProps) => {
         const videoId = mediaUrl.split("youtu.be/")[1];
         embedUrl = `https://www.youtube.com/embed/${videoId}`;
       }
-      
+  
       return (
         <AspectRatio ratio={16 / 9} className="bg-muted">
           <iframe
@@ -258,13 +243,45 @@ export const WorkoutPlayer = ({ workoutId, onClose }: WorkoutPlayerProps) => {
         </AspectRatio>
       );
     }
-    
+  
+    // Handle direct MP4/WebM/Ogg videos
+    if (mediaUrl.match(/\.(mp4|webm|ogg|mov)$/i)) {
+      return (
+        <AspectRatio ratio={16 / 9} className="bg-muted">
+          <video 
+            src={mediaUrl}
+            controls
+            className="rounded-md object-cover w-full h-full"
+          />
+        </AspectRatio>
+      );
+    }
+  
+    // Handle Images
+    if (mediaUrl.match(/\.(jpeg|jpg|gif|png)$/i)) {
+      return (
+        <AspectRatio ratio={16 / 9} className="bg-muted">
+          <img 
+            src={mediaUrl} 
+            alt={currentExercise?.name || "Exercise demonstration"} 
+            className="rounded-md object-cover w-full h-full"
+          />
+        </AspectRatio>
+      );
+    }
+  
+    // If no valid media type, show placeholder
     return (
       <div className="py-10 text-center">
-        <p className="text-muted-foreground">Unsupported media format.</p>
+        <img 
+          src="https://fakeimg.pl/600x400/b36666/ffffff?text=No+Media&font=bebas" 
+          alt="No Media Available"
+          className="rounded-md w-full h-auto mx-auto"
+        />
       </div>
     );
   };
+  
 
   return (
     <>
