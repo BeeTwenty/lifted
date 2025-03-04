@@ -12,6 +12,8 @@ import { WorkoutPlayer } from "@/components/WorkoutPlayer";
 import { NutritionStat } from "@/components/NutritionStat";
 import { WeightTracker } from "@/components/WeightTracker";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { EditWorkoutDialog } from "@/components/EditWorkoutDialog";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -20,6 +22,7 @@ const Index = () => {
   const [activeWorkoutId, setActiveWorkoutId] = useState<string | null>(null);
   const [dailyCalories, setDailyCalories] = useState<number>(2000);
   const [consumedCalories, setConsumedCalories] = useState<number>(0);
+  const [editWorkoutId, setEditWorkoutId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchNutritionData();
@@ -153,27 +156,31 @@ const Index = () => {
     }
   };
 
+  const handleEditWorkout = (id: string) => {
+    setEditWorkoutId(id);
+  };
+
   const displayName = profile?.fullName || profile?.username || profile?.email?.split('@')[0] || "there";
 
   return (
-    <div className="min-h-screen bg-gray-50/50">
+    <div className="min-h-screen bg-gray-50/50 dark:bg-slate-900 dark:text-white">
       <div className="container py-8 space-y-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-fade-in">
           <div>
-            <h1 className="text-4xl font-bold">Welcome back, {displayName}</h1>
-            <p className="text-gray-500 mt-2">Track your fitness journey</p>
+            <h1 className="text-4xl font-bold dark:text-white">Welcome back, {displayName}</h1>
+            <p className="text-gray-500 dark:text-gray-400 mt-2">Track your fitness journey</p>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:flex gap-2">
-          <CreateWorkoutDialog />
-
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:flex gap-2 items-center">
+            <CreateWorkoutDialog />
+            <ThemeToggle />
             <Link to="/nutrition">
-              <Button variant="outline" className="bg-primary/5">
+              <Button variant="outline" className="bg-primary/5 dark:bg-primary/10">
                 <UtensilsCrossed className="mr-2 h-4 w-4" />
                 Nutrition Tracker
               </Button>
             </Link>
             <Link to="/settings">
-              <Button variant="outline" className="bg-primary/5">
+              <Button variant="outline" className="bg-primary/5 dark:bg-primary/10">
                 <Settings className="mr-2 h-4 w-4" />
                 Settings
               </Button>
@@ -199,14 +206,12 @@ const Index = () => {
           </div>
         </section>
 
-      
-
         <section className="py-4">
-          <h2 className="text-2xl font-semibold mb-4">Routines</h2>
+          <h2 className="text-2xl font-semibold mb-4 dark:text-white">Routines</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {isLoading ? (
               Array(3).fill(0).map((_, i) => (
-                <div key={i} className="h-32 bg-gray-100 animate-pulse rounded-lg" />
+                <div key={i} className="h-32 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg" />
               ))
             ) : routines?.length ? (
               routines.map((routine) => (
@@ -217,10 +222,11 @@ const Index = () => {
                   exercises={routine.exercises}
                   onClick={() => setActiveWorkoutId(routine.id)}
                   onDelete={() => handleDeleteWorkout(routine.id)}
+                  onEdit={() => handleEditWorkout(routine.id)}
                 />
               ))
             ) : (
-              <div className="col-span-full text-center py-8 text-gray-500">
+              <div className="col-span-full text-center py-8 text-gray-500 dark:text-gray-400">
                 No routines yet. Start by creating your first workout routine!
               </div>
             )}
@@ -235,6 +241,16 @@ const Index = () => {
           workoutId={activeWorkoutId} 
           onClose={() => setActiveWorkoutId(null)} 
         />
+
+        {editWorkoutId && (
+          <EditWorkoutDialog
+            workoutId={editWorkoutId}
+            open={!!editWorkoutId}
+            onOpenChange={(open) => {
+              if (!open) setEditWorkoutId(null);
+            }}
+          />
+        )}
       </div>
     </div>
   );

@@ -27,30 +27,108 @@ export type Database = {
         }
         Relationships: []
       }
+      equipment: {
+        Row: {
+          id: number
+          name: string
+        }
+        Insert: {
+          id?: number
+          name: string
+        }
+        Update: {
+          id?: number
+          name?: string
+        }
+        Relationships: []
+      }
+      exercise_equipment: {
+        Row: {
+          equipment_id: number
+          exercise_id: string
+        }
+        Insert: {
+          equipment_id: number
+          exercise_id: string
+        }
+        Update: {
+          equipment_id?: number
+          exercise_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_equipment_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "equipment"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_equipment_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercise_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exercise_muscles: {
+        Row: {
+          exercise_id: string
+          muscle_id: number
+        }
+        Insert: {
+          exercise_id: string
+          muscle_id: number
+        }
+        Update: {
+          exercise_id?: string
+          muscle_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_muscles_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercise_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_muscles_muscle_id_fkey"
+            columns: ["muscle_id"]
+            isOneToOne: false
+            referencedRelation: "muscles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercise_templates: {
         Row: {
           created_at: string
           description: string
+          exercise_base: number | null
           id: string
-          media_url: string
+          media_url: string | null
           name: string
-          target_muscle: string
+          target_muscle: string | null
         }
         Insert: {
           created_at?: string
           description: string
+          exercise_base?: number | null
           id?: string
-          media_url: string
+          media_url?: string | null
           name: string
-          target_muscle: string
+          target_muscle?: string | null
         }
         Update: {
           created_at?: string
           description?: string
+          exercise_base?: number | null
           id?: string
-          media_url?: string
+          media_url?: string | null
           name?: string
-          target_muscle?: string
+          target_muscle?: string | null
         }
         Relationships: []
       }
@@ -138,6 +216,21 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      muscles: {
+        Row: {
+          id: number
+          name: string
+        }
+        Insert: {
+          id?: number
+          name: string
+        }
+        Update: {
+          id?: number
+          name?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {

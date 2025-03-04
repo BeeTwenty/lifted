@@ -1,47 +1,50 @@
 
-import { Card } from "@/components/ui/card";
-import { Activity, Play, Trash2 } from "lucide-react";
+import * as React from "react";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Play, Edit, Trash2 } from "lucide-react";
 
 interface WorkoutCardProps {
   title: string;
-  duration: string;
   exercises: number;
-  onClick?: () => void;
-  onDelete?: () => void;
+  duration?: string;
+  onClick: () => void;
+  onDelete: () => void;
+  onEdit: () => void;
 }
 
-export function WorkoutCard({ title, duration, exercises, onClick, onDelete }: WorkoutCardProps) {
+export function WorkoutCard({ title, exercises, duration, onClick, onDelete, onEdit }: WorkoutCardProps) {
   return (
-    <Card 
-      className="p-6 hover:shadow-lg transition-shadow animate-fade-up"
-    >
-      <div className="flex items-start justify-between">
-        <div className="space-y-2">
-          <h3 className="font-semibold text-lg">{title}</h3>
-          <div className="flex items-center gap-4 text-sm text-gray-500">
-            <div className="flex items-center gap-1">
-              <Activity size={16} />
-              <span>{exercises} exercises</span>
-            </div>
-          </div>
-        </div>
-        <div className="flex flex-col gap-2">
-          <Button variant="outline" size="sm" onClick={onClick}>
-            <Play size={16} className="mr-1" />
-            Start
-          </Button>
-          {onDelete && (
-            <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-            }}>
-              <Trash2 size={16} className="mr-1" />
-              Delete
-            </Button>
+    <Card className="flex flex-col h-full animate-fade-up dark:border-gray-700 dark:bg-gray-800">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-xl dark:text-white">{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="flex-grow pb-2">
+        <div className="space-y-1">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {exercises} {exercises === 1 ? "exercise" : "exercises"}
+          </p>
+          {duration && (
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Duration: {duration}
+            </p>
           )}
         </div>
-      </div>
+      </CardContent>
+      <CardFooter className="flex justify-between pt-2">
+        <Button variant="default" size="sm" onClick={onClick}>
+          <Play className="mr-2 h-4 w-4" />
+          Start
+        </Button>
+        <div className="flex space-x-2">
+          <Button variant="outline" size="icon" onClick={onEdit}>
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="icon" onClick={onDelete}>
+            <Trash2 className="h-4 w-4 text-red-500" />
+          </Button>
+        </div>
+      </CardFooter>
     </Card>
   );
 }

@@ -10,6 +10,7 @@ import Nutrition from "@/pages/Nutrition";
 import Admin from "@/pages/Admin";
 import { AuthProvider } from "@/components/AuthProvider";
 import { hideSplashScreen } from "vite-plugin-splash-screen/runtime";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -25,23 +26,25 @@ function App() {
   hideSplashScreen();
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/nutrition" element={<Nutrition />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/admin" element={
-              <AdminProtectedRoute>
-                <Admin />
-              </AdminProtectedRoute>
-            } />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <Toaster />
-        </AuthProvider>
-      </BrowserRouter>
+      <ThemeProvider defaultTheme="system" storageKey="fitness-theme">
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/nutrition" element={<Nutrition />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/admin" element={
+                <AdminProtectedRoute>
+                  <Admin />
+                </AdminProtectedRoute>
+              } />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            <Toaster />
+          </AuthProvider>
+        </BrowserRouter>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

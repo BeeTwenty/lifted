@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +24,7 @@ const Settings = () => {
     workoutGoal: 5,
     hourGoal: 10,
     height: 170,
+    age: 30,
   });
 
   // Fetch user profile data
@@ -34,7 +36,7 @@ const Settings = () => {
 
       const { data, error } = await supabase
         .from("profiles")
-        .select("full_name, username, daily_calories, workout_goal, hour_goal, height")
+        .select("full_name, username, daily_calories, workout_goal, hour_goal, height, age")
         .eq("id", user.id)
         .single();
 
@@ -53,6 +55,7 @@ const Settings = () => {
         workoutGoal: profile.workout_goal || 5,
         hourGoal: profile.hour_goal || 10,
         height: profile.height || 170,
+        age: profile.age || 30,
       });
     }
   }, [profile]);
@@ -72,6 +75,7 @@ const Settings = () => {
           workout_goal: data.workoutGoal,
           hour_goal: data.hourGoal,
           height: data.height,
+          age: data.age,
         })
         .eq("id", user.id);
 
@@ -101,90 +105,64 @@ const Settings = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50/50 py-8">
+    <div className="min-h-screen bg-gray-50/50 dark:bg-slate-900 py-8">
       <div className="container max-w-2xl">
         <div className="mb-6 flex items-center">
           <Button 
             variant="ghost" 
-            className="mr-2"
+            className="mr-2 dark:text-white"
             onClick={() => navigate(-1)}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          <h1 className="text-3xl font-bold">Settings</h1>
+          <h1 className="text-3xl font-bold dark:text-white">Settings</h1>
         </div>
 
-        <Card>
+        <Card className="dark:border-gray-700 dark:bg-gray-800">
           <CardHeader>
-            <CardTitle>Profile Settings</CardTitle>
+            <CardTitle className="dark:text-white">Profile Settings</CardTitle>
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name</Label>
+                <Label htmlFor="fullName" className="dark:text-gray-300">Full Name</Label>
                 <Input
                   id="fullName"
                   value={formData.fullName}
                   onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                   placeholder="Your full name"
+                  className="dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
+                <Label htmlFor="username" className="dark:text-gray-300">Username</Label>
                 <Input
                   id="username"
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                   placeholder="Your username"
+                  className="dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="dailyCalories">Daily Calorie Target</Label>
+                <Label htmlFor="age" className="dark:text-gray-300">Age</Label>
                 <Input
-                  id="dailyCalories"
+                  id="age"
                   type="number"
-                  value={formData.dailyCalories}
-                  onChange={(e) => setFormData({ ...formData, dailyCalories: Number(e.target.value) })}
-                  placeholder="2000"
-                  min="500"
-                  max="10000"
-                />
-                <p className="text-sm text-muted-foreground">
-                  Set your daily calorie target for nutrition tracking
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="workoutGoal">Weekly Workout Goal</Label>
-                <Input
-                  id="workoutGoal"
-                  type="number"
-                  value={formData.workoutGoal}
-                  onChange={(e) => setFormData({ ...formData, workoutGoal: Number(e.target.value) })}
-                  placeholder="5"
+                  value={formData.age}
+                  onChange={(e) => setFormData({ ...formData, age: Number(e.target.value) })}
+                  placeholder="30"
                   min="1"
-                  max="30"
+                  max="120"
+                  className="dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="hourGoal">Weekly Workout Hours Goal</Label>
-                <Input
-                  id="hourGoal"
-                  type="number"
-                  value={formData.hourGoal}
-                  onChange={(e) => setFormData({ ...formData, hourGoal: Number(e.target.value) })}
-                  placeholder="10"
-                  min="1"
-                  max="50"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="height">Height (cm)</Label>
+                <Label htmlFor="height" className="dark:text-gray-300">Height (cm)</Label>
                 <Input
                   id="height"
                   type="number"
@@ -193,20 +171,72 @@ const Settings = () => {
                   placeholder="170"
                   min="50"
                   max="250"
+                  className="dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="dailyCalories" className="dark:text-gray-300">Daily Calorie Target</Label>
+                <Input
+                  id="dailyCalories"
+                  type="number"
+                  value={formData.dailyCalories}
+                  onChange={(e) => setFormData({ ...formData, dailyCalories: Number(e.target.value) })}
+                  placeholder="2000"
+                  min="500"
+                  max="10000"
+                  className="dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                />
+                <p className="text-sm text-muted-foreground dark:text-gray-400">
+                  Set your daily calorie target for nutrition tracking
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="workoutGoal" className="dark:text-gray-300">Weekly Workout Goal</Label>
+                <Input
+                  id="workoutGoal"
+                  type="number"
+                  value={formData.workoutGoal}
+                  onChange={(e) => setFormData({ ...formData, workoutGoal: Number(e.target.value) })}
+                  placeholder="5"
+                  min="1"
+                  max="30"
+                  className="dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="hourGoal" className="dark:text-gray-300">Weekly Workout Hours Goal</Label>
+                <Input
+                  id="hourGoal"
+                  type="number"
+                  value={formData.hourGoal}
+                  onChange={(e) => setFormData({ ...formData, hourGoal: Number(e.target.value) })}
+                  placeholder="10"
+                  min="1"
+                  max="50"
+                  className="dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                 />
               </div>
 
               {/* Toggle Calorie Calculator */}
               <div className="space-y-2">
-                <Button variant="outline" onClick={() => setShowCalorieCalculator(!showCalorieCalculator)}>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowCalorieCalculator(!showCalorieCalculator)}
+                  className="dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                >
                   {showCalorieCalculator ? "Hide" : "Show"} Calorie Calculator
                 </Button>
 
                 {showCalorieCalculator && (
-                  <div className="mt-4 p-4 border rounded-lg">
-                    <CalorieCalculator onCalculate={(calories: number) => {
-                      setFormData(prev => ({ ...prev, dailyCalories: calories }));
-                    }} />
+                  <div className="mt-4 p-4 border rounded-lg dark:border-gray-700">
+                    <CalorieCalculator 
+                      onCalculate={(calories: number) => {
+                        setFormData(prev => ({ ...prev, dailyCalories: calories }));
+                      }} 
+                    />
                   </div>
                 )}
               </div>
@@ -214,7 +244,10 @@ const Settings = () => {
 
             {/* Save Button (Always Visible) */}
             <CardFooter className="flex justify-end">
-              <Button type="submit" disabled={updateProfileMutation.isPending}>
+              <Button 
+                type="submit" 
+                disabled={updateProfileMutation.isPending}
+              >
                 {updateProfileMutation.isPending ? "Saving..." : "Save Settings"}
                 <Save className="ml-2 h-4 w-4" />
               </Button>
@@ -224,6 +257,6 @@ const Settings = () => {
       </div>
     </div>
   );
-};
+}
 
 export default Settings;

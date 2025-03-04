@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -41,16 +42,16 @@ const Nutrition = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50/50">
+    <div className="min-h-screen bg-gray-50/50 dark:bg-slate-900 dark:text-white">
       <div className="container py-8 space-y-8">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-4xl font-bold">Nutrition Tracker</h1>
-            <p className="text-gray-500 mt-2">Manage your daily calories and macros</p>
+            <h1 className="text-4xl font-bold dark:text-white">Nutrition Tracker</h1>
+            <p className="text-gray-500 dark:text-gray-400 mt-2">Manage your daily calories and macros</p>
           </div>
           <Link to="/">
-            <Button variant="outline">
+            <Button variant="outline" className="dark:border-gray-700 dark:text-gray-200">
               <Home className="mr-2 h-4 w-4" />
               Back to Dashboard
             </Button>
@@ -59,7 +60,7 @@ const Nutrition = () => {
 
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="h-96 bg-gray-100 animate-pulse rounded-lg" />
+            <div className="h-96 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg" />
           </div>
         ) : (
           <div className="">
