@@ -10,7 +10,7 @@ export default defineConfig({
   plugins: [
     react(),
     splashScreen({
-      logoPath: '/public/logo.svg',
+      logoSrc: '/public/logo.svg',
       theme: {
         background: '#f9fafb',
         textColor: '#4f46e5',

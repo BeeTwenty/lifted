@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine, ResponsiveContainer } from "recharts";
@@ -39,7 +40,13 @@ export const WeightTracker = () => {
       
       // Set current weight from the latest record
       if (data && data.length > 0) {
-        setNewWeight(data[data.length - 1].weight.toString());
+        const latestRecord = data[data.length - 1];
+        setNewWeight(latestRecord.weight.toString());
+        
+        // Calculate BMI with the latest weight record if height is available
+        if (height) {
+          calculateBMI(latestRecord.weight, parseFloat(height));
+        }
       }
       
       setLoading(false);
@@ -65,8 +72,12 @@ export const WeightTracker = () => {
       if (data && data.height) {
         setHeight(data.height.toString());
         
-        // Calculate BMI if both height and weight are available
-        if (newWeight) {
+        // Calculate BMI with the latest weight record if available
+        if (weightRecords.length > 0) {
+          const latestWeight = weightRecords[weightRecords.length - 1].weight;
+          calculateBMI(latestWeight, data.height);
+        } else if (newWeight) {
+          // If no records yet but we have a new weight value
           calculateBMI(parseFloat(newWeight), data.height);
         }
       }
@@ -109,10 +120,8 @@ export const WeightTracker = () => {
         });
 
       if (recordError) throw recordError;
-
-      // No need to update profile's weight as it's not in the schema
       
-      // Update BMI if height is available
+      // Calculate BMI if height is available
       if (height) {
         calculateBMI(weight, parseFloat(height));
       }
@@ -131,6 +140,14 @@ export const WeightTracker = () => {
       });
     }
   };
+
+  // Whenever the weight records or height changes, update the BMI if possible
+  useEffect(() => {
+    if (weightRecords.length > 0 && height) {
+      const latestWeight = weightRecords[weightRecords.length - 1].weight;
+      calculateBMI(latestWeight, parseFloat(height));
+    }
+  }, [weightRecords, height]);
 
   const getBmiCategory = (bmi: number) => {
     if (bmi < 18.5) return "Underweight";
@@ -161,6 +178,18 @@ export const WeightTracker = () => {
 
   const underweightThreshold = getBmiThresholdWeight(18.5);
   const overweightThreshold = getBmiThresholdWeight(25);
+
+  // Get latest weight for BMI display
+  const latestWeight = weightRecords.length > 0 ? 
+    weightRecords[weightRecords.length - 1].weight : 
+    (newWeight ? parseFloat(newWeight) : null);
+
+  // Always calculate BMI based on latest weight entry if height is available
+  useEffect(() => {
+    if (latestWeight && height) {
+      calculateBMI(latestWeight, parseFloat(height));
+    }
+  }, [latestWeight, height]);
 
   return (
     <Card>
@@ -195,7 +224,7 @@ export const WeightTracker = () => {
                   </div>
                 </div>
 
-                {(height && newWeight) && (
+                {(height && latestWeight) && (
                   <div className="mt-4 p-4 border rounded-md bg-slate-50">
                     <div className="flex justify-between items-center">
                       <div>
