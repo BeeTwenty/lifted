@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -35,19 +36,12 @@
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
@@ -79,14 +73,15 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    
+    --sidebar-background: 217.2 32.6% 12%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 210 40% 98%;
+    --sidebar-primary-foreground: 222.2 47.4% 11.2%;
+    --sidebar-accent: 217.2 32.6% 17.5%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217.2 32.6% 17.5%;
+    --sidebar-ring: 212.7 26.8% 83.9%;
   }
 }
 
@@ -96,6 +91,41 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground transition-colors duration-300;
   }
+  
+  /* Custom dark mode styles for common elements */
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    @apply text-gray-500;
+  }
+  
+  .dark .card {
+    @apply border-gray-700 bg-gray-800/90 shadow-lg;
+  }
+  
+  .dark button.btn-primary {
+    @apply bg-blue-600 hover:bg-blue-700;
+  }
+  
+  .dark button.btn-secondary {
+    @apply bg-gray-700 hover:bg-gray-800;
+  }
+}
+
+/* Additional utility classes for dark mode transitions */
+.theme-transition {
+  @apply transition-all duration-300 ease-in-out;
+}
+
+.dark-card {
+  @apply dark:border-gray-700 dark:bg-gray-800/90;
+}
+
+.dark-text {
+  @apply dark:text-gray-200;
+}
+
+.dark-text-muted {
+  @apply dark:text-gray-400;
 }

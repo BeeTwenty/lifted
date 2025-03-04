@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Search } from "lucide-react";
 import { ExerciseTemplate } from "@/types/workout";
 
@@ -39,25 +38,25 @@ export function ExerciseSearch({ templates, onSelectTemplate, placeholder = "Sea
           placeholder={placeholder}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-8"
+          className="pl-8 dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:placeholder:text-gray-500"
         />
       </div>
 
       <div className="space-y-1 max-h-[300px] overflow-y-auto pr-1">
         {filteredTemplates.length === 0 ? (
-          <p className="text-center py-4 text-sm text-muted-foreground">
+          <p className="text-center py-4 text-sm text-muted-foreground dark:text-gray-400">
             No matching exercises found
           </p>
         ) : (
           filteredTemplates.map((template) => (
             <div
               key={template.id}
-              className="p-2 rounded-md hover:bg-accent cursor-pointer transition-colors"
+              className="p-2 rounded-md hover:bg-accent dark:hover:bg-gray-700 cursor-pointer transition-colors"
               onClick={() => onSelectTemplate(template)}
             >
-              <div className="font-medium">{template.name}</div>
+              <div className="font-medium dark:text-white">{template.name}</div>
               {template.target_muscle && (
-                <div className="text-xs text-muted-foreground">{template.target_muscle}</div>
+                <div className="text-xs text-muted-foreground dark:text-gray-400">{template.target_muscle}</div>
               )}
             </div>
           ))

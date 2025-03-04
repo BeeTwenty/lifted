@@ -2,7 +2,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { fileURLToPath, URL } from "url";
-import path from "path";
 import { splashScreen } from "vite-plugin-splash-screen";
 
 // https://vitejs.dev/config/
@@ -10,14 +9,8 @@ export default defineConfig({
   plugins: [
     react(),
     splashScreen({
-      logoSrc: 'logo.svg',
-      customHtml: `
-        <div class="splash-container">
-          <img src="/logo.svg" alt="Logo" class="splash-logo" />
-          <div class="splash-title">Fitness Tracker</div>
-        </div>
-      `,
-      customCss: `
+      logoSrc: '/logo.svg',
+      injectGlobal: `
         .splash-container {
           display: flex;
           flex-direction: column;
@@ -36,6 +29,12 @@ export default defineConfig({
           margin-top: 20px;
           color: #4f46e5;
         }
+      `,
+      template: `
+        <div class="splash-container">
+          <img src="/logo.svg" alt="Logo" class="splash-logo" />
+          <div class="splash-title">Fitness Tracker</div>
+        </div>
       `
     }),
   ],
