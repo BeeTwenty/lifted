@@ -10,13 +10,7 @@ export default defineConfig({
   plugins: [
     react(),
     splashScreen({
-      logoSrc: '/public/logo.svg',
-      theme: {
-        background: '#f9fafb',
-        textColor: '#4f46e5',
-        logoWidth: '80px',
-        logoHeight: '80px'
-      },
+      logoSrc: '/logo.svg',
       customHtml: `
         <div class="splash-container">
           <img src="/logo.svg" alt="Logo" class="splash-logo" />
