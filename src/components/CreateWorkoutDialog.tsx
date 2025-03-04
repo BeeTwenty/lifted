@@ -1,10 +1,9 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +15,7 @@ import { Exercise, ExerciseTemplate } from "@/types/workout";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { v4 as uuidv4 } from "uuid";
 import { Slider } from "@/components/ui/slider";
+import { ExerciseSearch } from "@/components/ExerciseSearch";
 
 interface ExerciseInputProps {
   onAddExercise: (exercise: Exercise) => void;
@@ -155,23 +155,11 @@ const ExerciseInput = ({ onAddExercise, defaultRestTime, templates }: ExerciseIn
         </Button>
       </TabsContent>
       <TabsContent value="templates" className="mt-4">
-        <ScrollArea className="h-[300px] pr-4">
-          <div className="grid grid-cols-1 gap-2">
-            {templates.map((template) => (
-              <Card key={template.id} className="cursor-pointer hover:bg-accent/20" onClick={() => handleSelectTemplate(template)}>
-                <CardContent className="p-3">
-                  <div className="font-medium">{template.name}</div>
-                  <div className="text-sm text-muted-foreground">{template.target_muscle}</div>
-                </CardContent>
-              </Card>
-            ))}
-            {templates.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                No exercise templates found
-              </div>
-            )}
-          </div>
-        </ScrollArea>
+        <ExerciseSearch 
+          templates={templates} 
+          onSelectTemplate={handleSelectTemplate} 
+          placeholder="Search by exercise name or muscle group..."
+        />
       </TabsContent>
     </Tabs>
   );

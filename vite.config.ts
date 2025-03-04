@@ -10,20 +10,30 @@ export default defineConfig({
   plugins: [
     react(),
     splashScreen({
+      logoPath: '/public/logo.svg',
+      theme: {
+        background: '#f9fafb',
+        textColor: '#4f46e5',
+        logoWidth: '80px',
+        logoHeight: '80px'
+      },
+      customHtml: `
+        <div class="splash-container">
+          <img src="/logo.svg" alt="Logo" class="splash-logo" />
+          <div class="splash-title">Fitness Tracker</div>
+        </div>
+      `,
       customCss: `
-        body {
-          background-color: #f9fafb;
-        }
-        .splash-logo {
-          width: 80px;
-          height: 80px;
-        }
         .splash-container {
           display: flex;
           flex-direction: column;
           justify-content: center;
           align-items: center;
           height: 100vh;
+        }
+        .splash-logo {
+          width: 80px;
+          height: 80px;
         }
         .splash-title {
           font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
@@ -32,14 +42,7 @@ export default defineConfig({
           margin-top: 20px;
           color: #4f46e5;
         }
-      `,
-      logoPath: '/public/logo.svg',
-      customHtml: `
-        <div class="splash-container">
-          <img src="/logo.svg" alt="Logo" class="splash-logo" />
-          <div class="splash-title">Fitness Tracker</div>
-        </div>
-      `,
+      `
     }),
   ],
   resolve: {

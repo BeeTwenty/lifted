@@ -1,12 +1,17 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Trash2, Plus, Save } from "lucide-react";
+import { Trash2, Plus, Save, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { ExerciseTemplate } from "@/types/workout";
+import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ExerciseSearch } from "@/components/ExerciseSearch";
 
 interface EditWorkoutDialogProps {
   workoutId: string;
@@ -21,6 +26,7 @@ interface Exercise {
   reps: number;
   weight?: number;
   rest_time?: number;
+  notes?: string;
 }
 
 interface Workout {
@@ -36,12 +42,28 @@ export function EditWorkoutDialog({ workoutId, open, onOpenChange }: EditWorkout
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(true);
   const [workout, setWorkout] = useState<Workout | null>(null);
+  const [templates, setTemplates] = useState<ExerciseTemplate[]>([]);
   
   useEffect(() => {
     if (open && workoutId) {
       fetchWorkoutDetails();
+      fetchExerciseTemplates();
     }
   }, [workoutId, open]);
+
+  const fetchExerciseTemplates = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("exercise_templates")
+        .select("*")
+        .order("name");
+      
+      if (error) throw error;
+      setTemplates(data || []);
+    } catch (error: any) {
+      console.error("Error fetching exercise templates:", error.message);
+    }
+  };
 
   const fetchWorkoutDetails = async () => {
     try {
@@ -57,7 +79,7 @@ export function EditWorkoutDialog({ workoutId, open, onOpenChange }: EditWorkout
       
       const { data: exercisesData, error: exercisesError } = await supabase
         .from("exercises")
-        .select("id, name, sets, reps, weight, rest_time")
+        .select("id, name, sets, reps, weight, rest_time, notes")
         .eq("workout_id", workoutId);
       
       if (exercisesError) throw exercisesError;
@@ -105,7 +127,8 @@ export function EditWorkoutDialog({ workoutId, open, onOpenChange }: EditWorkout
               sets: exercise.sets,
               reps: exercise.reps,
               weight: exercise.weight,
-              rest_time: exercise.rest_time
+              rest_time: exercise.rest_time,
+              notes: exercise.notes
             });
           
           if (error) throw error;
@@ -118,7 +141,8 @@ export function EditWorkoutDialog({ workoutId, open, onOpenChange }: EditWorkout
               sets: exercise.sets,
               reps: exercise.reps,
               weight: exercise.weight,
-              rest_time: exercise.rest_time
+              rest_time: exercise.rest_time,
+              notes: exercise.notes
             })
             .eq("id", exercise.id);
           
@@ -175,6 +199,30 @@ export function EditWorkoutDialog({ workoutId, open, onOpenChange }: EditWorkout
     setWorkout({
       ...workout,
       exercises: [...workout.exercises, newExercise]
+    });
+  };
+
+  const addTemplateExercise = (template: ExerciseTemplate) => {
+    if (!workout) return;
+    
+    const newExercise: Exercise = {
+      id: `new-${Date.now()}`,
+      name: template.name,
+      sets: 3,
+      reps: 10,
+      weight: 0,
+      rest_time: 60,
+      notes: template.description
+    };
+    
+    setWorkout({
+      ...workout,
+      exercises: [...workout.exercises, newExercise]
+    });
+    
+    toast({
+      title: "Exercise added",
+      description: `${template.name} has been added to your workout`
     });
   };
 
@@ -245,13 +293,44 @@ export function EditWorkoutDialog({ workoutId, open, onOpenChange }: EditWorkout
               </div>
             </div>
             
+            <div className="space-y-2">
+              <Label htmlFor="workoutNotes">Notes (optional)</Label>
+              <Textarea
+                id="workoutNotes"
+                value={workout.notes || ""}
+                onChange={(e) => setWorkout({ ...workout, notes: e.target.value })}
+                placeholder="Any notes about this workout..."
+              />
+            </div>
+            
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-medium">Exercises</h3>
-                <Button onClick={addNewExercise} size="sm" variant="outline">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Exercise
-                </Button>
+                <div className="flex gap-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button size="sm" variant="outline">
+                        <Search className="h-4 w-4 mr-2" />
+                        Add From Templates
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 p-0" align="end">
+                      <div className="p-4">
+                        <h4 className="font-medium mb-2">Search Exercise Templates</h4>
+                        <ExerciseSearch 
+                          templates={templates} 
+                          onSelectTemplate={addTemplateExercise}
+                          placeholder="Search by name or muscle..."
+                        />
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                  
+                  <Button onClick={addNewExercise} size="sm" variant="outline">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Manual
+                  </Button>
+                </div>
               </div>
               
               {workout.exercises.length === 0 ? (
@@ -326,6 +405,16 @@ export function EditWorkoutDialog({ workoutId, open, onOpenChange }: EditWorkout
                             min="0"
                             value={exercise.rest_time || 60}
                             onChange={(e) => handleExerciseChange(index, 'rest_time', e.target.value)}
+                          />
+                        </div>
+                        
+                        <div className="md:col-span-2 space-y-2">
+                          <Label htmlFor={`exercise-notes-${index}`}>Notes</Label>
+                          <Textarea
+                            id={`exercise-notes-${index}`}
+                            value={exercise.notes || ""}
+                            onChange={(e) => handleExerciseChange(index, 'notes', e.target.value)}
+                            placeholder="Any notes about this exercise..."
                           />
                         </div>
                       </div>
