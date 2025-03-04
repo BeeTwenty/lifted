@@ -204,15 +204,15 @@ export function FoodTracker({ dailyCalories }: { dailyCalories: number }) {
         {/* Macronutrients Breakdown */}
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="bg-blue-50 p-2 rounded">
-            <div className="text-lg font-bold">{nutrition.totalProtein}g</div>
+            <div className="text-lg font-bold dark:text-gray-700">{nutrition.totalProtein}g</div>
             <div className="text-xs text-gray-500">Protein</div>
           </div>
           <div className="bg-green-50 p-2 rounded">
-            <div className="text-lg font-bold">{nutrition.totalCarbs}g</div>
+            <div className="text-lg font-bold dark:text-gray-700">{nutrition.totalCarbs}g</div>
             <div className="text-xs text-gray-500">Carbs</div>
           </div>
           <div className="bg-yellow-50 p-2 rounded">
-            <div className="text-lg font-bold">{nutrition.totalFat}g</div>
+            <div className="text-lg font-bold dark:text-gray-700">{nutrition.totalFat}g</div>
             <div className="text-xs text-gray-500">Fat</div>
           </div>
         </div>
@@ -235,11 +235,11 @@ export function FoodTracker({ dailyCalories }: { dailyCalories: number }) {
               {foodItems.map((item) => (
                 <div
                   key={item.id}
-                  className="flex justify-between items-center p-2 bg-gray-50 rounded"
+                  className="flex justify-between items-center p-2 bg-gray-50 rounded  dark:bg-gray-800"
                 >
                   <div>
                     <div className="font-medium">{item.name}</div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-gray-500 dark:text-black">
                       {item.calories} kcal | P: {item.protein}g | C: {item.carbs}g | F: {item.fat}g
                     </div>
                   </div>

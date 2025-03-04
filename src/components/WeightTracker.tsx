@@ -225,7 +225,7 @@ export const WeightTracker = () => {
                 </div>
 
                 {(height && latestWeight) && (
-                  <div className="mt-4 p-4 border rounded-md bg-slate-50">
+                  <div className="mt-4 p-4 border rounded-md bg-slate-50 dark:bg-slate-800">
                     <div className="flex justify-between items-center">
                       <div>
                         <h3 className="font-semibold">Your BMI</h3>

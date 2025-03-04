@@ -222,13 +222,15 @@ const Settings = () => {
 
               {/* Toggle Calorie Calculator */}
               <div className="space-y-2">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setShowCalorieCalculator(!showCalorieCalculator)}
-                  className="dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                >
-                  {showCalorieCalculator ? "Hide" : "Show"} Calorie Calculator
-                </Button>
+              <Button 
+  type="button" // Prevents form submission
+  variant="outline" 
+  onClick={() => setShowCalorieCalculator(!showCalorieCalculator)}
+  className="dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+>
+  {showCalorieCalculator ? "Hide" : "Show"} Calorie Calculator
+</Button>
+
 
                 {showCalorieCalculator && (
                   <div className="mt-4 p-4 border rounded-lg dark:border-gray-700">

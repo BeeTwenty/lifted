@@ -172,7 +172,7 @@ const Index = () => {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:flex gap-2 items-center">
             <CreateWorkoutDialog />
-            <ThemeToggle />
+            
             <Link to="/nutrition">
               <Button variant="outline" className="bg-primary/5 dark:bg-primary/10">
                 <UtensilsCrossed className="mr-2 h-4 w-4" />
@@ -185,6 +185,7 @@ const Index = () => {
                 Settings
               </Button>
             </Link>
+            <ThemeToggle />
             <Button variant="outline" onClick={handleSignOut}>
               <LogOut className="mr-2 h-4 w-4" />
               Sign Out
