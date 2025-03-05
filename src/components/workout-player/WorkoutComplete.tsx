@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { UseWorkoutPlayerReturn } from "@/hooks/useWorkoutPlayer";
+import { AdDisplay } from "@/components/AdDisplay";
+import { useState } from "react";
 
 interface WorkoutCompleteProps {
   playerState: UseWorkoutPlayerReturn;
@@ -11,12 +13,20 @@ interface WorkoutCompleteProps {
 
 export function WorkoutComplete({ playerState }: WorkoutCompleteProps) {
   const { workoutNotes, setWorkoutNotes, handleComplete } = playerState;
+  const [adDismissed, setAdDismissed] = useState(false);
 
   return (
     <div className="py-3 sm:py-10 text-center space-y-2 sm:space-y-4">
       <CheckCircle className="mx-auto h-10 w-10 sm:h-16 sm:w-16 text-primary" />
       <h2 className="text-lg sm:text-2xl font-bold">Workout Complete!</h2>
       <p className="text-xs sm:text-sm text-muted-foreground">Congratulations on finishing your workout.</p>
+      
+      {!adDismissed && (
+        <AdDisplay 
+          onClose={() => setAdDismissed(true)} 
+          fullWidth 
+        />
+      )}
       
       <div className="space-y-1.5 sm:space-y-2 text-left">
         <Label htmlFor="workout-notes" className="text-xs sm:text-sm">Add notes about this workout (optional)</Label>
