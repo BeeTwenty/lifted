@@ -6,9 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Play, Pause, SkipForward, RotateCcw, CheckCircle, Timer, HelpCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
-import Image from "@/components/ui/image";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface Exercise {
@@ -153,12 +151,9 @@ export const WorkoutPlayer = ({ workoutId, onClose }: WorkoutPlayerProps) => {
       if (!user) throw new Error("User not authenticated");
       
       const { error } = await supabase
-        .from("completed_workouts")
-        .insert({
-          user_id: user.id,
-          workout_id: workout.id,
-          completed_at: new Date().toISOString(),
-          duration: durationMinutes
+        .rpc('record_completed_workout', {
+          workout_id_param: workout.id,
+          duration_param: durationMinutes
         });
         
       if (error) throw error;

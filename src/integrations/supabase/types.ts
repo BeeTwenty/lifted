@@ -27,6 +27,41 @@ export type Database = {
         }
         Relationships: []
       }
+      completed_workouts: {
+        Row: {
+          completed_at: string
+          created_at: string
+          duration: number
+          id: string
+          user_id: string
+          workout_id: string
+        }
+        Insert: {
+          completed_at?: string
+          created_at?: string
+          duration: number
+          id?: string
+          user_id: string
+          workout_id: string
+        }
+        Update: {
+          completed_at?: string
+          created_at?: string
+          duration?: number
+          id?: string
+          user_id?: string
+          workout_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "completed_workouts_workout_id_fkey"
+            columns: ["workout_id"]
+            isOneToOne: false
+            referencedRelation: "workouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       equipment: {
         Row: {
           id: number

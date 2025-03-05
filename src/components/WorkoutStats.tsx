@@ -28,12 +28,9 @@ export function WorkoutStats() {
       const mondayOfThisWeek = startOfWeek(now, { weekStartsOn: 1 });
       const startOfWeekISO = mondayOfThisWeek.toISOString();
 
-      // Get completed workouts this week (tracking completed workouts, not just created ones)
+      // Get completed workouts this week
       const { data: completedWorkouts, error: completedError } = await supabase
-        .from("completed_workouts")
-        .select("id, duration")
-        .eq("user_id", user.id)
-        .gte("completed_at", startOfWeekISO);
+        .rpc('get_completed_workouts_since', { start_date: startOfWeekISO });
 
       if (completedError) throw completedError;
 
