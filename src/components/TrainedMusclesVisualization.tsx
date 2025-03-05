@@ -8,7 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 // Mapping of muscle names to muscle groups in the wger SVGs
+// This includes both English names and possible Latin/technical names
 const muscleMapping: Record<string, string[]> = {
+  // English names
   "Chest": ["chest"],
   "Back": ["back"],
   "Shoulders": ["shoulders", "deltoids"],
@@ -23,6 +25,28 @@ const muscleMapping: Record<string, string[]> = {
   "Calves": ["calves"],
   "Quads": ["quads"],
   "Hamstrings": ["hamstrings"],
+  
+  // Latin/technical names that might be in the database
+  "Pectoralis major": ["chest"],
+  "Latissimus dorsi": ["back", "lats"],
+  "Deltoideus": ["shoulders", "deltoids"],
+  "Biceps brachii": ["biceps"],
+  "Triceps brachii": ["triceps"],
+  "Rectus abdominis": ["abs"],
+  "Quadriceps femoris": ["quads", "legs"],
+  "Biceps femoris": ["hamstrings", "legs"],
+  "Gastrocnemius": ["calves", "legs"],
+  "Gluteus maximus": ["glutes"],
+  "Brachioradialis": ["forearms"],
+  "Trapezius": ["traps", "back"],
+  "Erector spinae": ["back"],
+  "Soleus": ["calves", "legs"],
+  "Vastus lateralis": ["quads", "legs"],
+  "Vastus medialis": ["quads", "legs"],
+  "Rectus femoris": ["quads", "legs"],
+  "Adductor magnus": ["legs"],
+  "Semitendinosus": ["hamstrings", "legs"],
+  "Semimembranosus": ["hamstrings", "legs"]
 };
 
 export function TrainedMusclesVisualization() {
