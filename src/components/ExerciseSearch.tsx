@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { ExerciseTemplate } from "@/types/workout";
+import { formatMuscleName } from "@/lib/format-utils";
 
 interface ExerciseSearchProps {
   templates: ExerciseTemplate[];
@@ -56,7 +57,9 @@ export function ExerciseSearch({ templates, onSelectTemplate, placeholder = "Sea
             >
               <div className="font-medium dark:text-white">{template.name}</div>
               {template.target_muscle && (
-                <div className="text-xs text-muted-foreground dark:text-gray-400">{template.target_muscle}</div>
+                <div className="text-xs text-muted-foreground dark:text-gray-400">
+                  {formatMuscleName(template.target_muscle)}
+                </div>
               )}
             </div>
           ))

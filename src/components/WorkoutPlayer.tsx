@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
+import { formatMuscleName } from "@/lib/format-utils";
 
 interface Exercise {
   id: string;
