@@ -45,17 +45,30 @@ export function ExerciseHistoryTracker() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      // Simplified query to just get distinct exercise names from exercises table
-      const { data, error } = await supabase
+      // First, get the user's workout IDs
+      const { data: workoutIds, error: workoutError } = await supabase
+        .from("workouts")
+        .select("id")
+        .eq("user_id", user.id);
+
+      if (workoutError) throw workoutError;
+      
+      if (!workoutIds || workoutIds.length === 0) {
+        setExercises([]);
+        setIsLoading(false);
+        return;
+      }
+
+      // Then use those IDs to get exercise names
+      const { data: exerciseData, error: exerciseError } = await supabase
         .from("exercises")
         .select("name")
-        .eq("workout_id", supabase.from("workouts").select("id").eq("user_id", user.id))
-        .limit(50);
+        .in("workout_id", workoutIds.map(w => w.id));
 
-      if (error) throw error;
+      if (exerciseError) throw exerciseError;
 
       // Get unique exercise names
-      const uniqueExercises = [...new Set(data?.map(item => item.name) || [])];
+      const uniqueExercises = [...new Set(exerciseData?.map(item => item.name) || [])];
       setExercises(uniqueExercises);
       
       // Select the first exercise by default if available
@@ -80,7 +93,21 @@ export function ExerciseHistoryTracker() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      // First get the exercises data
+      // First get the user's workout IDs
+      const { data: workoutIds, error: workoutIdsError } = await supabase
+        .from("workouts")
+        .select("id")
+        .eq("user_id", user.id);
+        
+      if (workoutIdsError) throw workoutIdsError;
+      
+      if (!workoutIds || workoutIds.length === 0) {
+        setHistory([]);
+        setIsHistoryLoading(false);
+        return;
+      }
+
+      // Get the exercises with the selected name from the user's workouts
       const { data: exercisesData, error: exercisesError } = await supabase
         .from("exercises")
         .select(`
@@ -90,7 +117,8 @@ export function ExerciseHistoryTracker() {
           sets,
           workout_id
         `)
-        .eq("name", exerciseName);
+        .eq("name", exerciseName)
+        .in("workout_id", workoutIds.map(w => w.id));
 
       if (exercisesError) throw exercisesError;
       
@@ -101,7 +129,7 @@ export function ExerciseHistoryTracker() {
       }
 
       // Get all workout_ids from the exercises
-      const workoutIds = exercisesData.map(ex => ex.workout_id);
+      const exerciseWorkoutIds = exercisesData.map(ex => ex.workout_id);
 
       // Get workout details and completed dates
       const { data: workoutsData, error: workoutsError } = await supabase
@@ -113,7 +141,7 @@ export function ExerciseHistoryTracker() {
             completed_at
           )
         `)
-        .in("id", workoutIds);
+        .in("id", exerciseWorkoutIds);
 
       if (workoutsError) throw workoutsError;
 
