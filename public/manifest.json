@@ -1,10 +1,11 @@
 
 {
-  "name": "Fitness Tracker",
-  "short_name": "Fitness",
+  "name": "StrengthScribe",
+  "short_name": "Strength",
   "description": "Track your workouts, nutrition, and fitness goals",
   "start_url": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#ffffff",
   "theme_color": "#4f46e5",
   "icons": [
@@ -18,5 +19,7 @@
       "sizes": "512x512",
       "type": "image/svg+xml"
     }
-  ]
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
 }
