@@ -6,22 +6,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { InfoIcon } from "lucide-react";
 
-// Mapping of muscle names to SVG path IDs
+// Mapping of muscle names to areas in the new minimal diagram
 const muscleMapping: Record<string, string[]> = {
-  "Chest": ["chest-left", "chest-right"],
-  "Back": ["back-upper", "back-lower"],
-  "Shoulders": ["shoulder-left", "shoulder-right", "deltoid-left", "deltoid-right"],
-  "Biceps": ["bicep-left", "bicep-right"],
-  "Triceps": ["tricep-left", "tricep-right"],
+  "Chest": ["chest"],
+  "Back": ["upper-back", "lower-back"],
+  "Shoulders": ["shoulders"],
+  "Biceps": ["arms"],
+  "Triceps": ["arms"],
   "Abs": ["abs"],
-  "Legs": ["quad-left", "quad-right", "hamstring-left", "hamstring-right", "calf-left", "calf-right"],
-  "Glutes": ["glute-left", "glute-right"],
-  "Forearms": ["forearm-left", "forearm-right"],
-  "Traps": ["traps"],
-  "Lats": ["lat-left", "lat-right"],
-  "Calves": ["calf-left", "calf-right"],
-  "Quads": ["quad-left", "quad-right"],
-  "Hamstrings": ["hamstring-left", "hamstring-right"],
+  "Legs": ["legs"],
+  "Glutes": ["glutes"],
+  "Forearms": ["arms"],
+  "Traps": ["shoulders"],
+  "Lats": ["upper-back"],
+  "Calves": ["legs"],
+  "Quads": ["legs"],
+  "Hamstrings": ["legs"],
 };
 
 export function TrainedMusclesVisualization() {
@@ -47,15 +47,18 @@ export function TrainedMusclesVisualization() {
     },
   });
 
-  // Get all SVG path IDs that need to be highlighted
-  const highlightedPaths = trainedMuscles?.flatMap(muscle => 
+  // Get all muscle areas that need to be highlighted
+  const highlightedAreas = trainedMuscles?.flatMap(muscle => 
     muscleMapping[muscle] || []
   ) || [];
 
+  // Create a set for faster lookups
+  const highlightedSet = new Set(highlightedAreas);
+
   return (
-    <Card className="w-full">
+    <Card className="w-full h-full">
       <CardHeader className="pb-2">
-        <CardTitle className="text-xl">Muscles Trained This Week</CardTitle>
+        <CardTitle className="text-xl">Trained This Week</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -68,166 +71,111 @@ export function TrainedMusclesVisualization() {
           </Alert>
         ) : (
           <div className="flex flex-col items-center space-y-4">
-            <div className="relative w-full max-w-[300px]">
-              {/* Front view */}
-              <svg viewBox="0 0 200 400" className="w-full">
-                {/* Body outline */}
-                <path d="M100,30 C130,30 150,50 150,80 C150,110 140,130 140,160 C140,190 150,220 150,250 C150,280 140,310 130,330 C120,350 110,370 100,390 C90,370 80,350 70,330 C60,310 50,280 50,250 C50,220 60,190 60,160 C60,130 50,110 50,80 C50,50 70,30 100,30 Z" 
-                  fill="#f3f4f6" stroke="#000" strokeWidth="1" />
+            <div className="relative w-full max-w-[200px]">
+              {/* Clean, minimal body outline based on the image */}
+              <svg viewBox="0 0 100 200" className="w-full">
+                {/* Background */}
+                <rect x="0" y="0" width="100" height="200" fill="#1A1F2C" rx="10" ry="10" />
                 
-                {/* Head */}
-                <circle cx="100" cy="20" r="15" fill="#f3f4f6" stroke="#000" strokeWidth="1" />
-
-                {/* Chest - left */}
-                <path id="chest-left" d="M80,100 C70,110 70,120 75,130 C80,140 90,145 100,145 L100,100 Z" 
-                  fill={highlightedPaths.includes("chest-left") ? "#ef4444" : "#f3f4f6"} 
-                  stroke="#000" strokeWidth="1" />
+                {/* Title */}
+                <text x="50" y="15" fontSize="8" fontWeight="bold" fill="white" textAnchor="middle">Trained This Week</text>
                 
-                {/* Chest - right */}
-                <path id="chest-right" d="M120,100 C130,110 130,120 125,130 C120,140 110,145 100,145 L100,100 Z" 
-                  fill={highlightedPaths.includes("chest-right") ? "#ef4444" : "#f3f4f6"} 
-                  stroke="#000" strokeWidth="1" />
-                
-                {/* Abs */}
-                <path id="abs" d="M90,145 L110,145 L110,190 L90,190 Z" 
-                  fill={highlightedPaths.includes("abs") ? "#ef4444" : "#f3f4f6"} 
-                  stroke="#000" strokeWidth="1" />
-                
-                {/* Shoulder - left */}
-                <path id="shoulder-left" d="M70,80 C60,85 55,90 50,100 C60,110 70,100 80,95 Z" 
-                  fill={highlightedPaths.includes("shoulder-left") ? "#ef4444" : "#f3f4f6"} 
-                  stroke="#000" strokeWidth="1" />
-                
-                {/* Shoulder - right */}
-                <path id="shoulder-right" d="M130,80 C140,85 145,90 150,100 C140,110 130,100 120,95 Z" 
-                  fill={highlightedPaths.includes("shoulder-right") ? "#ef4444" : "#f3f4f6"} 
-                  stroke="#000" strokeWidth="1" />
-                
-                {/* Bicep - left */}
-                <path id="bicep-left" d="M65,110 C55,120 50,130 55,150 C60,140 70,130 75,125 Z" 
-                  fill={highlightedPaths.includes("bicep-left") ? "#ef4444" : "#f3f4f6"} 
-                  stroke="#000" strokeWidth="1" />
-                
-                {/* Bicep - right */}
-                <path id="bicep-right" d="M135,110 C145,120 150,130 145,150 C140,140 130,130 125,125 Z" 
-                  fill={highlightedPaths.includes("bicep-right") ? "#ef4444" : "#f3f4f6"} 
-                  stroke="#000" strokeWidth="1" />
-                
-                {/* Forearm - left */}
-                <path id="forearm-left" d="M55,150 C50,160 45,170 50,190 C55,180 60,170 60,160 Z" 
-                  fill={highlightedPaths.includes("forearm-left") ? "#ef4444" : "#f3f4f6"} 
-                  stroke="#000" strokeWidth="1" />
-                
-                {/* Forearm - right */}
-                <path id="forearm-right" d="M145,150 C150,160 155,170 150,190 C145,180 140,170 140,160 Z" 
-                  fill={highlightedPaths.includes("forearm-right") ? "#ef4444" : "#f3f4f6"} 
-                  stroke="#000" strokeWidth="1" />
-                
-                {/* Quad - left */}
-                <path id="quad-left" d="M85,190 L70,250 L85,250 L95,190 Z" 
-                  fill={highlightedPaths.includes("quad-left") ? "#ef4444" : "#f3f4f6"} 
-                  stroke="#000" strokeWidth="1" />
-                
-                {/* Quad - right */}
-                <path id="quad-right" d="M115,190 L130,250 L115,250 L105,190 Z" 
-                  fill={highlightedPaths.includes("quad-right") ? "#ef4444" : "#f3f4f6"} 
-                  stroke="#000" strokeWidth="1" />
-                
-                {/* Calf - left */}
-                <path id="calf-left" d="M80,250 L75,310 L90,310 L85,250 Z" 
-                  fill={highlightedPaths.includes("calf-left") ? "#ef4444" : "#f3f4f6"} 
-                  stroke="#000" strokeWidth="1" />
-                
-                {/* Calf - right */}
-                <path id="calf-right" d="M120,250 L125,310 L110,310 L115,250 Z" 
-                  fill={highlightedPaths.includes("calf-right") ? "#ef4444" : "#f3f4f6"} 
-                  stroke="#000" strokeWidth="1" />
-              </svg>
-              
-              {/* Back view (positioned to the right of front view) */}
-              <svg viewBox="0 0 200 400" className="w-full mt-6">
-                {/* Body outline */}
-                <path d="M100,30 C130,30 150,50 150,80 C150,110 140,130 140,160 C140,190 150,220 150,250 C150,280 140,310 130,330 C120,350 110,370 100,390 C90,370 80,350 70,330 C60,310 50,280 50,250 C50,220 60,190 60,160 C60,130 50,110 50,80 C50,50 70,30 100,30 Z" 
-                  fill="#f3f4f6" stroke="#000" strokeWidth="1" />
-                
-                {/* Head */}
-                <circle cx="100" cy="20" r="15" fill="#f3f4f6" stroke="#000" strokeWidth="1" />
-                
-                {/* Traps */}
-                <path id="traps" d="M80,50 L120,50 L115,80 L85,80 Z" 
-                  fill={highlightedPaths.includes("traps") ? "#ef4444" : "#f3f4f6"} 
-                  stroke="#000" strokeWidth="1" />
-                
-                {/* Deltoid - left */}
-                <path id="deltoid-left" d="M75,80 C65,85 55,95 60,110 C70,105 80,100 85,95 Z" 
-                  fill={highlightedPaths.includes("deltoid-left") ? "#ef4444" : "#f3f4f6"} 
-                  stroke="#000" strokeWidth="1" />
-                
-                {/* Deltoid - right */}
-                <path id="deltoid-right" d="M125,80 C135,85 145,95 140,110 C130,105 120,100 115,95 Z" 
-                  fill={highlightedPaths.includes("deltoid-right") ? "#ef4444" : "#f3f4f6"} 
-                  stroke="#000" strokeWidth="1" />
-                
-                {/* Back upper */}
-                <path id="back-upper" d="M85,80 L115,80 L120,120 L80,120 Z" 
-                  fill={highlightedPaths.includes("back-upper") ? "#ef4444" : "#f3f4f6"} 
-                  stroke="#000" strokeWidth="1" />
-                
-                {/* Lat - left */}
-                <path id="lat-left" d="M80,120 L65,150 L80,170 L90,150 Z" 
-                  fill={highlightedPaths.includes("lat-left") ? "#ef4444" : "#f3f4f6"} 
-                  stroke="#000" strokeWidth="1" />
-                
-                {/* Lat - right */}
-                <path id="lat-right" d="M120,120 L135,150 L120,170 L110,150 Z" 
-                  fill={highlightedPaths.includes("lat-right") ? "#ef4444" : "#f3f4f6"} 
-                  stroke="#000" strokeWidth="1" />
-                
-                {/* Back lower */}
-                <path id="back-lower" d="M80,170 L120,170 L115,190 L85,190 Z" 
-                  fill={highlightedPaths.includes("back-lower") ? "#ef4444" : "#f3f4f6"} 
-                  stroke="#000" strokeWidth="1" />
-                
-                {/* Tricep - left */}
-                <path id="tricep-left" d="M60,110 C55,120 50,140 55,150 C65,140 70,125 75,115 Z" 
-                  fill={highlightedPaths.includes("tricep-left") ? "#ef4444" : "#f3f4f6"} 
-                  stroke="#000" strokeWidth="1" />
-                
-                {/* Tricep - right */}
-                <path id="tricep-right" d="M140,110 C145,120 150,140 145,150 C135,140 130,125 125,115 Z" 
-                  fill={highlightedPaths.includes("tricep-right") ? "#ef4444" : "#f3f4f6"} 
-                  stroke="#000" strokeWidth="1" />
-                
-                {/* Glute - left */}
-                <path id="glute-left" d="M85,190 C75,200 70,220 80,230 C90,225 95,210 95,190 Z" 
-                  fill={highlightedPaths.includes("glute-left") ? "#ef4444" : "#f3f4f6"} 
-                  stroke="#000" strokeWidth="1" />
-                
-                {/* Glute - right */}
-                <path id="glute-right" d="M115,190 C125,200 130,220 120,230 C110,225 105,210 105,190 Z" 
-                  fill={highlightedPaths.includes("glute-right") ? "#ef4444" : "#f3f4f6"} 
-                  stroke="#000" strokeWidth="1" />
-                
-                {/* Hamstring - left */}
-                <path id="hamstring-left" d="M80,230 L70,280 L85,280 L90,230 Z" 
-                  fill={highlightedPaths.includes("hamstring-left") ? "#ef4444" : "#f3f4f6"} 
-                  stroke="#000" strokeWidth="1" />
-                
-                {/* Hamstring - right */}
-                <path id="hamstring-right" d="M120,230 L130,280 L115,280 L110,230 Z" 
-                  fill={highlightedPaths.includes("hamstring-right") ? "#ef4444" : "#f3f4f6"} 
-                  stroke="#000" strokeWidth="1" />
+                {/* Body outline - simplified version */}
+                <g fill="none" stroke="white" strokeWidth="1">
+                  {/* Head */}
+                  <circle 
+                    cx="50" 
+                    cy="30" 
+                    r="10" 
+                    fill="none" 
+                  />
+                  
+                  {/* Shoulders */}
+                  <path 
+                    id="shoulders" 
+                    d="M35,45 H65" 
+                    strokeWidth="2"
+                    stroke={highlightedSet.has("shoulders") ? "#ef4444" : "white"}
+                  />
+                  
+                  {/* Arms */}
+                  <path 
+                    id="arms" 
+                    d="M35,45 V80 M65,45 V80" 
+                    strokeWidth="2"
+                    stroke={highlightedSet.has("arms") ? "#ef4444" : "white"}
+                  />
+                  
+                  {/* Chest */}
+                  <path 
+                    id="chest" 
+                    d="M35,45 L50,55 L65,45" 
+                    strokeWidth="2"
+                    stroke={highlightedSet.has("chest") ? "#ef4444" : "white"}
+                  />
+                  
+                  {/* Upper back */}
+                  <path 
+                    id="upper-back" 
+                    d="M40,55 H60" 
+                    strokeWidth="2"
+                    stroke={highlightedSet.has("upper-back") ? "#ef4444" : "white"}
+                  />
+                  
+                  {/* Abs */}
+                  <path 
+                    id="abs" 
+                    d="M50,55 V90" 
+                    strokeWidth="2"
+                    stroke={highlightedSet.has("abs") ? "#ef4444" : "white"}
+                  />
+                  
+                  {/* Lower back */}
+                  <path 
+                    id="lower-back" 
+                    d="M40,70 H60" 
+                    strokeWidth="2"
+                    stroke={highlightedSet.has("lower-back") ? "#ef4444" : "white"}
+                  />
+                  
+                  {/* Torso outline */}
+                  <path 
+                    d="M35,45 V90 H65 V45" 
+                    stroke="white" 
+                    strokeWidth="1" 
+                    fill="none"
+                  />
+                  
+                  {/* Legs */}
+                  <path 
+                    id="legs" 
+                    d="M40,90 V150 M60,90 V150" 
+                    strokeWidth="2"
+                    stroke={highlightedSet.has("legs") ? "#ef4444" : "white"}
+                  />
+                  
+                  {/* Glutes */}
+                  <path 
+                    id="glutes" 
+                    d="M40,100 H60" 
+                    strokeWidth="2"
+                    stroke={highlightedSet.has("glutes") ? "#ef4444" : "white"}
+                  />
+                  
+                  {/* Pelvis */}
+                  <path 
+                    d="M35,90 L50,100 L65,90" 
+                    stroke="white" 
+                    strokeWidth="1" 
+                    fill="none"
+                  />
+                </g>
               </svg>
             </div>
             
-            <div className="text-sm text-gray-500 flex items-center gap-2 mt-2">
-              <InfoIcon className="h-4 w-4" />
-              <span>Red indicates muscles trained this week</span>
-            </div>
-            
-            {trainedMuscles?.length === 0 && (
-              <p className="text-center text-gray-500 mt-2">
-                No muscles trained yet this week. Complete your workouts to see progress!
+            {!isLoading && trainedMuscles?.length === 0 && (
+              <p className="text-center text-gray-500 mt-2 text-sm">
+                No muscles trained yet this week.
               </p>
             )}
           </div>

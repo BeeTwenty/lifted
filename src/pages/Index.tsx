@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { WorkoutCard } from "@/components/WorkoutCard";
 import { WorkoutStats } from "@/components/WorkoutStats";
@@ -201,7 +200,7 @@ const Index = () => {
             <div className="md:col-span-2">
               <WorkoutStats />
             </div>
-            <div className="md:col-span-1">
+            <div className="md:col-span-1 h-full">
               <TrainedMusclesVisualization />
             </div>
             {/* 
