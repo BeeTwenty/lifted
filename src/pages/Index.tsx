@@ -14,7 +14,6 @@ import { WeightTracker } from "@/components/WeightTracker";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { EditWorkoutDialog } from "@/components/EditWorkoutDialog";
-import { TrainedMusclesVisualization } from "@/components/TrainedMusclesVisualization";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -196,13 +195,8 @@ const Index = () => {
         </div>
 
         <section className="py-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-up">
-            <div className="md:col-span-2">
-              <WorkoutStats />
-            </div>
-            <div className="md:col-span-1 h-full">
-              <TrainedMusclesVisualization />
-            </div>
+          <div className="grid grid-cols-1 gap-4 animate-fade-up">
+            <WorkoutStats />
             {/* 
             <div className="md:col-span-1">
               <NutritionStat
