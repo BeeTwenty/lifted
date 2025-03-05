@@ -15,12 +15,27 @@ export function AdDisplay({ onClose, fullWidth = false }: AdDisplayProps) {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    // Simulate loading an ad
+    // GOOGLE ADSENSE INTEGRATION
+    // 1. Add your Google AdSense script to index.html head section:
+    // <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=YOUR-CLIENT-ID"
+    //      crossorigin="anonymous"></script>
+
+    // 2. Replace this entire useEffect with your AdSense ad unit code:
+    // Remove the setTimeout and mock data below
+    // Instead, insert your AdSense code here, example:
+    // <ins class="adsbygoogle"
+    //      style="display:block"
+    //      data-ad-client="YOUR-CLIENT-ID"
+    //      data-ad-slot="YOUR-AD-SLOT"
+    //      data-ad-format="auto"
+    //      data-full-width-responsive="true"></ins>
+    // <script>
+    //      (adsbygoogle = window.adsbygoogle || []).push({});
+    // </script>
+
+    // This is mock data for demonstration - REMOVE THIS when adding real AdSense
     setLoading(true);
-    
-    // This timeout simulates fetching an ad from a service
     const timer = setTimeout(() => {
-      // In a real implementation, this would be replaced with actual ad content from an ad network
       const ads = [
         "Try our premium plan for more workout features!",
         "Check out new protein supplements at HealthStore",
@@ -54,6 +69,9 @@ export function AdDisplay({ onClose, fullWidth = false }: AdDisplayProps) {
       )}
       
       <div className="text-center">
+        {/* GOOGLE ADSENSE AD UNIT
+            Replace this entire content div with your AdSense ad unit code
+            The loading state and mock content below should be removed */}
         {loading ? (
           <div className="py-2 animate-pulse">
             <div className="h-4 bg-primary/20 rounded w-3/4 mx-auto mb-2"></div>
