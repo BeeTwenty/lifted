@@ -11,8 +11,6 @@ export default defineConfig(({ mode }) => ({
     react(),
     splashScreen({
       logoSrc: 'lifted-logo.svg',
-      backgroundColor: '#4f46e5',
-      spinnerColor: '#ffffff',
     }),
     mode === 'development' && componentTagger(),
   ].filter(Boolean),
