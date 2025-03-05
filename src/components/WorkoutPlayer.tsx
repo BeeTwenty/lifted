@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -10,6 +11,8 @@ import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { formatMuscleName } from "@/lib/format-utils";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 interface Exercise {
   id: string;
@@ -49,6 +52,7 @@ export const WorkoutPlayer = ({ workoutId, onClose }: WorkoutPlayerProps) => {
   const [actualDuration, setActualDuration] = useState<number>(0);
   const [isEditingWeight, setIsEditingWeight] = useState(false);
   const [editedWeight, setEditedWeight] = useState<number | null>(null);
+  const [workoutNotes, setWorkoutNotes] = useState<string>("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -163,13 +167,52 @@ export const WorkoutPlayer = ({ workoutId, onClose }: WorkoutPlayerProps) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
       
+      // Updated to include notes
       const { error } = await supabase
-        .rpc('record_completed_workout', {
-          workout_id_param: workout.id,
-          duration_param: durationMinutes
+        .from("completed_workouts")
+        .insert({
+          user_id: user.id,
+          workout_id: workout.id,
+          duration: durationMinutes,
+          notes: workoutNotes || null
         });
         
       if (error) throw error;
+      
+      // Also insert workout_muscles records
+      const { data: exercisesData } = await supabase
+        .from("exercises")
+        .select("name")
+        .eq("workout_id", workout.id);
+        
+      if (exercisesData && exercisesData.length > 0) {
+        // Get unique exercise names
+        const exerciseNames = [...new Set(exercisesData.map(e => e.name))];
+        
+        // Get target muscles for these exercises
+        const { data: templateData } = await supabase
+          .from("exercise_templates")
+          .select("target_muscle")
+          .in("name", exerciseNames)
+          .not("target_muscle", "is", null);
+          
+        if (templateData && templateData.length > 0) {
+          // Get unique muscle names
+          const muscleNames = [...new Set(templateData.map(t => t.target_muscle))];
+          
+          // Insert workout_muscles records
+          for (const muscleName of muscleNames) {
+            if (muscleName) {
+              await supabase
+                .from("workout_muscles")
+                .insert({
+                  workout_id: workout.id,
+                  muscle_name: muscleName
+                });
+            }
+          }
+        }
+      }
       
       queryClient.invalidateQueries({ queryKey: ["workoutStats"] });
       
@@ -375,8 +418,20 @@ export const WorkoutPlayer = ({ workoutId, onClose }: WorkoutPlayerProps) => {
               <CheckCircle className="mx-auto h-16 w-16 text-primary" />
               <h2 className="text-2xl font-bold">Workout Complete!</h2>
               <p className="text-muted-foreground">Congratulations on finishing your workout.</p>
+              
+              <div className="space-y-2 text-left">
+                <Label htmlFor="workout-notes">Add notes about this workout (optional)</Label>
+                <Textarea 
+                  id="workout-notes"
+                  placeholder="How did it feel? Any issues or progress?"
+                  value={workoutNotes}
+                  onChange={(e) => setWorkoutNotes(e.target.value)}
+                  className="min-h-[100px]"
+                />
+              </div>
+              
               <div className="pt-4">
-                <Button onClick={handleComplete}>Finish</Button>
+                <Button onClick={handleComplete}>Finish & Save</Button>
               </div>
             </div>
           ) : isResting ? (
