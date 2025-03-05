@@ -237,7 +237,32 @@ const Index = () => {
         
         <TabsContent value="workouts">
           <div className="grid grid-cols-1 gap-4 animate-fade-up">
-            <WorkoutStats />
+            <section>
+              <h2 className="text-2xl font-semibold mb-4 dark:text-white">Your Routines</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {isRoutinesLoading ? (
+                  Array(3).fill(0).map((_, i) => (
+                    <div key={i} className="h-32 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg" />
+                  ))
+                ) : routines?.length ? (
+                  routines.map((routine) => (
+                    <WorkoutCard
+                      key={routine.id}
+                      title={routine.title}
+                      duration={routine.duration ? `${routine.duration} min` : ""}
+                      exercises={routine.exercises}
+                      onClick={() => setActiveWorkoutId(routine.id)}
+                      onDelete={() => handleDeleteWorkout(routine.id)}
+                      onEdit={() => handleEditWorkout(routine.id)}
+                    />
+                  ))
+                ) : (
+                  <div className="col-span-full text-center py-8 text-gray-500 dark:text-gray-400">
+                    No routines yet. Start by creating your first workout routine!
+                  </div>
+                )}
+              </div>
+            </section>
           </div>
         </TabsContent>
         

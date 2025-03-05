@@ -54,8 +54,7 @@ export function ExerciseHistoryTracker() {
             .select("id")
             .eq("user_id", user.id)
         ))
-        .order("name")
-        .limit(100);
+        .order("name");
 
       if (error) throw error;
 
@@ -85,7 +84,7 @@ export function ExerciseHistoryTracker() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      // Join exercises with workouts and completed_workouts in separate queries
+      // First get the exercises data
       const { data: exercisesData, error: exercisesError } = await supabase
         .from("exercises")
         .select(`
@@ -95,13 +94,7 @@ export function ExerciseHistoryTracker() {
           sets,
           workout_id
         `)
-        .eq("name", exerciseName)
-        .filter("workout_id", "in", (
-          supabase
-            .from("workouts")
-            .select("id")
-            .eq("user_id", user.id)
-        ));
+        .eq("name", exerciseName);
 
       if (exercisesError) throw exercisesError;
       
@@ -120,7 +113,7 @@ export function ExerciseHistoryTracker() {
         .select(`
           id,
           title,
-          completed_workouts(completed_at)
+          completed_workouts!inner(completed_at)
         `)
         .in("id", workoutIds)
         .order("completed_workouts.completed_at", { ascending: false });
