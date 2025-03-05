@@ -16,47 +16,47 @@ interface WorkoutCardProps {
 export function WorkoutCard({ title, exercises, duration, onClick, onDelete, onEdit }: WorkoutCardProps) {
   return (
     <Card className="flex flex-col h-full animate-fade-up transition-colors duration-200 dark:border-gray-700 dark:bg-gray-800/95">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-xl dark:text-white">{title}</CardTitle>
+      <CardHeader className="pb-1 sm:pb-2">
+        <CardTitle className="text-lg sm:text-xl line-clamp-1 dark:text-white">{title}</CardTitle>
       </CardHeader>
-      <CardContent className="flex-grow pb-2">
+      <CardContent className="flex-grow pb-1 sm:pb-2">
         <div className="space-y-1">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
             {exercises} {exercises === 1 ? "exercise" : "exercises"}
           </p>
           {duration && (
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
               Duration: {duration}
             </p>
           )}
         </div>
       </CardContent>
-      <CardFooter className="flex justify-between pt-2">
+      <CardFooter className="flex justify-between pt-1 sm:pt-2">
         <Button 
           variant="default" 
           size="sm" 
           onClick={onClick}
-          className="dark:bg-blue-600 dark:hover:bg-blue-700 dark:text-white"
+          className="text-xs sm:text-sm dark:bg-blue-600 dark:hover:bg-blue-700 dark:text-white"
         >
-          <Play className="mr-2 h-4 w-4" />
+          <Play className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
           Start
         </Button>
-        <div className="flex space-x-2">
+        <div className="flex space-x-1 sm:space-x-2">
           <Button 
             variant="outline" 
             size="icon" 
             onClick={onEdit}
-            className="dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
+            className="h-7 w-7 sm:h-8 sm:w-8 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
           >
-            <Edit className="h-4 w-4 dark:text-gray-300" />
+            <Edit className="h-3 w-3 sm:h-4 sm:w-4 dark:text-gray-300" />
           </Button>
           <Button 
             variant="outline" 
             size="icon" 
             onClick={onDelete}
-            className="dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
+            className="h-7 w-7 sm:h-8 sm:w-8 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
           >
-            <Trash2 className="h-4 w-4 text-red-500" />
+            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-500" />
           </Button>
         </div>
       </CardFooter>

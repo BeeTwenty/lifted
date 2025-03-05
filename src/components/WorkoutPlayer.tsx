@@ -16,13 +16,13 @@ export const WorkoutPlayer = ({ workoutId, onClose }: WorkoutPlayerProps) => {
 
   return (
     <Dialog open={!!workoutId} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-w-[95%] p-4 sm:p-6">
         <DialogHeader>
-          <DialogTitle>{playerState.workout?.title || "Workout"}</DialogTitle>
+          <DialogTitle className="text-center sm:text-left">{playerState.workout?.title || "Workout"}</DialogTitle>
         </DialogHeader>
         
         {loading ? (
-          <div className="py-10 text-center">Loading workout...</div>
+          <div className="py-6 sm:py-10 text-center">Loading workout...</div>
         ) : completed ? (
           <WorkoutComplete playerState={playerState} />
         ) : isResting ? (
