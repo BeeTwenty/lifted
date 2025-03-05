@@ -174,7 +174,7 @@ const Settings = () => {
                   className="dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                 />
               </div>
-
+{/* 
               <div className="space-y-2">
                 <Label htmlFor="dailyCalories" className="dark:text-gray-300">Daily Calorie Target</Label>
                 <Input
@@ -191,7 +191,7 @@ const Settings = () => {
                   Set your daily calorie target for nutrition tracking
                 </p>
               </div>
-
+*/}
               <div className="space-y-2">
                 <Label htmlFor="workoutGoal" className="dark:text-gray-300">Weekly Workout Goal</Label>
                 <Input
@@ -219,8 +219,8 @@ const Settings = () => {
                   className="dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                 />
               </div>
-
-              {/* Toggle Calorie Calculator */}
+            
+              {/* Toggle Calorie Calculator 
               <div className="space-y-2">
               <Button 
   type="button" // Prevents form submission
@@ -242,6 +242,7 @@ const Settings = () => {
                   </div>
                 )}
               </div>
+              */}
             </CardContent>
 
             {/* Save Button (Always Visible) */}

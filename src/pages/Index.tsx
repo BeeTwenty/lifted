@@ -172,13 +172,14 @@ const Index = () => {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:flex gap-2 items-center">
             <CreateWorkoutDialog />
-            
+            {/* 
             <Link to="/nutrition">
               <Button variant="outline" className="bg-primary/5 dark:bg-primary/10">
                 <UtensilsCrossed className="mr-2 h-4 w-4" />
                 Nutrition Tracker
               </Button>
             </Link>
+            */}
             <Link to="/settings">
               <Button variant="outline" className="bg-primary/5 dark:bg-primary/10">
                 <Settings className="mr-2 h-4 w-4" />
@@ -194,16 +195,18 @@ const Index = () => {
         </div>
 
         <section className="py-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 animate-fade-up">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-up">
             <div className="md:col-span-3">
               <WorkoutStats />
             </div>
+            {/* 
             <div className="md:col-span-1">
               <NutritionStat
                 dailyCalories={dailyCalories}
                 consumedCalories={consumedCalories}
               />
             </div>
+            */}
           </div>
         </section>
 
