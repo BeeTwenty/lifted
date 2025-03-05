@@ -11,6 +11,7 @@ import {
   Database, 
   ArrowLeft,
   Shield,
+  ImageOff
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -18,6 +19,7 @@ import { useQuery } from "@tanstack/react-query";
 import DatabaseManager from "@/components/admin/DatabaseManager";
 import UserManager from "@/components/admin/UserManager";
 import SettingsManager from "@/components/admin/SettingsManager";
+import MissingMediaManager from "@/components/admin/MissingMediaManager";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -112,7 +114,7 @@ const Admin = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="database" className="flex items-center">
               <Database className="h-4 w-4 mr-2" />
               Database
@@ -124,6 +126,10 @@ const Admin = () => {
             <TabsTrigger value="settings" className="flex items-center">
               <Settings className="h-4 w-4 mr-2" />
               Settings
+            </TabsTrigger>
+            <TabsTrigger value="missing-media" className="flex items-center">
+              <ImageOff className="h-4 w-4 mr-2" />
+              Missing Media
             </TabsTrigger>
           </TabsList>
           
@@ -140,6 +146,11 @@ const Admin = () => {
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-4">
             <SettingsManager isAdmin={!!userProfile?.isAdmin} />
+          </TabsContent>
+          
+          {/* Missing Media Tab */}
+          <TabsContent value="missing-media" className="space-y-4">
+            <MissingMediaManager isAdmin={!!userProfile?.isAdmin} />
           </TabsContent>
         </Tabs>
       </div>
