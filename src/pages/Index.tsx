@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dumbbell, Plus, Calendar, Award, History, LineChart, Settings, LogOut } from "lucide-react";
+import { Dumbbell, Plus, Calendar, Award, History, LineChart, Settings, LogOut, Download } from "lucide-react";
 import { WorkoutCard } from "@/components/WorkoutCard";
 import { WorkoutStats } from "@/components/WorkoutStats";
 import { WorkoutPlayer } from "@/components/WorkoutPlayer";
@@ -18,6 +17,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExerciseHistoryTracker } from "@/components/ExerciseHistoryTracker";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { WeightTracker } from "@/components/WeightTracker";
+import { WorkoutExport } from "@/components/WorkoutExport";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -31,13 +31,11 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is authenticated on component mount
     const checkUser = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         setUser(user);
         if (!user) {
-          // Redirect unauthenticated users to auth page
           navigate("/auth");
         }
       } catch (error) {
@@ -110,7 +108,7 @@ const Index = () => {
         email: user.email
       };
     },
-    enabled: !!user, // Only run query if user is logged in
+    enabled: !!user,
   });
 
   const { data: routines, isLoading: isRoutinesLoading } = useQuery({
@@ -139,7 +137,7 @@ const Index = () => {
         duration: workout.duration || 0,
       }));
     },
-    enabled: !!user, // Only run query if user is logged in
+    enabled: !!user,
   });
 
   const handleSignOut = async () => {
@@ -187,7 +185,6 @@ const Index = () => {
 
   const displayName = profile?.fullName || profile?.username || profile?.email?.split('@')[0] || "there";
 
-  // Show loading state while checking authentication
   if (isLoading) {
     return (
       <div className="container py-4 flex items-center justify-center h-screen">
@@ -223,7 +220,7 @@ const Index = () => {
       </div>
 
       <Tabs defaultValue="workouts" className="w-full">
-        <TabsList className="grid grid-cols-3">
+        <TabsList className="grid grid-cols-4">
           <TabsTrigger value="workouts">
             <Dumbbell className="h-4 w-4 mr-2" /> Workouts
           </TabsTrigger>
@@ -232,6 +229,9 @@ const Index = () => {
           </TabsTrigger>
           <TabsTrigger value="history">
             <LineChart className="h-4 w-4 mr-2" /> Exercise History
+          </TabsTrigger>
+          <TabsTrigger value="export">
+            <Download className="h-4 w-4 mr-2" /> Export
           </TabsTrigger>
         </TabsList>
         
@@ -273,35 +273,12 @@ const Index = () => {
         <TabsContent value="history">
           <ExerciseHistoryTracker />
         </TabsContent>
+
+        <TabsContent value="export">
+          <WorkoutExport />
+        </TabsContent>
       </Tabs>
-{/* 
-      <section className="py-4">
-        <h2 className="text-2xl font-semibold mb-4 dark:text-white">Routines</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {isRoutinesLoading ? (
-            Array(3).fill(0).map((_, i) => (
-              <div key={i} className="h-32 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg" />
-            ))
-          ) : routines?.length ? (
-            routines.map((routine) => (
-              <WorkoutCard
-                key={routine.id}
-                title={routine.title}
-                duration={routine.duration ? `${routine.duration} min` : ""}
-                exercises={routine.exercises}
-                onClick={() => setActiveWorkoutId(routine.id)}
-                onDelete={() => handleDeleteWorkout(routine.id)}
-                onEdit={() => handleEditWorkout(routine.id)}
-              />
-            ))
-          ) : (
-            <div className="col-span-full text-center py-8 text-gray-500 dark:text-gray-400">
-              No routines yet. Start by creating your first workout routine!
-            </div>
-          )}
-        </div>
-      </section>
-*/}
+
       <section className="py-4">
         <WeightTracker />
       </section>
