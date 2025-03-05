@@ -6,6 +6,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 import { startOfWeek } from "date-fns";
 
+type CompletedWorkout = {
+  id: string;
+  workout_id: string;
+  duration: number;
+  completed_at: string;
+};
+
 export function WorkoutStats() {
   // Fetch user profile and workout stats
   const { data: userStats } = useQuery({
@@ -35,11 +42,13 @@ export function WorkoutStats() {
       if (completedError) throw completedError;
 
       const totalWorkouts = completedWorkouts?.length || 0;
-      const totalHours = completedWorkouts?.reduce((acc, curr) => acc + (curr.duration / 60), 0) || 0;
+      // Calculate total hours from minutes and round to whole number
+      const totalHours = completedWorkouts ? 
+        Math.round(completedWorkouts.reduce((acc: number, curr: CompletedWorkout) => acc + (curr.duration / 60), 0)) : 0;
 
       return {
         totalWorkouts,
-        totalHours: Math.round(totalHours),
+        totalHours,
         workoutGoal: profile?.workout_goal || 5,
         hourGoal: profile?.hour_goal || 10,
       };

@@ -373,7 +373,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_completed_workouts_since: {
+        Args: {
+          start_date: string
+        }
+        Returns: {
+          id: string
+          workout_id: string
+          duration: number
+          completed_at: string
+        }[]
+      }
+      record_completed_workout: {
+        Args: {
+          workout_id_param: string
+          duration_param: number
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
