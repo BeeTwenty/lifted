@@ -1,10 +1,9 @@
-
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Mail, Shield } from "lucide-react";
+import { Mail, Shield, Dumbbell } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -77,12 +76,7 @@ export default function Auth() {
     }
   };
 
-  // This is a special function to bootstrap the first admin
-  // The adminKey should be a secret value known only to administrators
-  // In a production app, this would be done through a secure backend process
   const handleCreateFirstAdmin = async () => {
-    // For demo purposes, we're using a simple key check
-    // In production, use a proper secure method
     if (adminKey !== "admin123") {
       toast({
         variant: "destructive",
@@ -95,7 +89,6 @@ export default function Auth() {
     try {
       setLoading(true);
       
-      // Check if the user is authenticated
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast({
@@ -106,7 +99,6 @@ export default function Auth() {
         return;
       }
 
-      // First, check if any admins exist (to prevent overriding)
       const { data: existingAdmins, error: checkError } = await supabase
         .from("admins")
         .select("*")
@@ -123,7 +115,6 @@ export default function Auth() {
         return;
       }
 
-      // Insert the current user as an admin
       const { error: insertError } = await supabase
         .from("admins")
         .insert({ user_id: user.id });
@@ -135,7 +126,6 @@ export default function Auth() {
         description: "You have been successfully set as the first admin user.",
       });
       
-      // Navigate to admin panel
       navigate("/admin");
     } catch (error: any) {
       toast({
@@ -152,7 +142,10 @@ export default function Auth() {
     <div className="min-h-screen bg-gray-50/50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md p-6 space-y-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">Welcome to FitTracker Pro</h1>
+          <div className="flex justify-center mb-4">
+            <Dumbbell className="h-12 w-12 text-primary" />
+          </div>
+          <h1 className="text-2xl font-bold">Welcome to Lifted</h1>
           <p className="text-gray-500 mt-2">Sign in or create an account to continue</p>
         </div>
 

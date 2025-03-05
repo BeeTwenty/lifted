@@ -199,9 +199,12 @@ const Index = () => {
   return (
     <div className="container py-4 space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-fade-in">
-        <div>
-          <h1 className="text-4xl font-bold dark:text-white">Welcome back, {displayName}</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-2">Track your fitness journey</p>
+        <div className="flex items-center gap-3">
+          <Dumbbell className="h-10 w-10 text-primary" />
+          <div>
+            <h1 className="text-4xl font-bold dark:text-white">Lifted</h1>
+            <p className="text-gray-500 dark:text-gray-400 mt-1">Welcome back, {displayName}</p>
+          </div>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:flex gap-2 items-center">
           <CreateWorkoutDialog />
