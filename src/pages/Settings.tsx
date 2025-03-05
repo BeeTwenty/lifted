@@ -1,265 +1,354 @@
-
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
+import { AdminAccessButton } from "@/components/AdminAccessButton";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
-import { ArrowLeft, Save } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { CalorieCalculator } from "@/components/CalorieCalculator"; // Import Calorie Calculator
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Bell, LogOut, Moon, Sun, User } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { useNavigate } from "react-router-dom";
+import { z } from "zod";
 
-const Settings = () => {
-  const navigate = useNavigate();
+const profileFormSchema = z.object({
+  username: z
+    .string()
+    .min(2, {
+      message: "Username must be at least 2 characters.",
+    })
+    .max(30, {
+      message: "Username must not be longer than 30 characters.",
+    }),
+  email: z
+    .string()
+    .email({
+      message: "Please enter a valid email address.",
+    }),
+  bio: z.string().max(160).optional(),
+});
+
+type ProfileFormValues = z.infer<typeof profileFormSchema>;
+
+export default function Settings() {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [showCalorieCalculator, setShowCalorieCalculator] = useState(false);
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [userData, setUserData] = useState<any>(null);
 
-  const [formData, setFormData] = useState({
-    fullName: "",
-    username: "",
-    dailyCalories: 2000,
-    workoutGoal: 5,
-    hourGoal: 10,
-    height: 170,
-    age: 30,
-  });
-
-  // Fetch user profile data
-  const { data: profile, isLoading: profileLoading } = useQuery({
-    queryKey: ["userProfile"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("User not found");
-
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("full_name, username, daily_calories, workout_goal, hour_goal, height, age")
-        .eq("id", user.id)
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  // Update form when profile data is loaded
   useEffect(() => {
-    if (profile) {
-      setFormData({
-        fullName: profile.full_name || "",
-        username: profile.username || "",
-        dailyCalories: profile.daily_calories || 2000,
-        workoutGoal: profile.workout_goal || 5,
-        hourGoal: profile.hour_goal || 10,
-        height: profile.height || 170,
-        age: profile.age || 30,
-      });
-    }
-  }, [profile]);
+    const fetchUserData = async () => {
+      try {
+        setLoading(true);
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          navigate("/auth");
+          return;
+        }
+        
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
+          .single();
+          
+        if (error) throw error;
+        
+        setUserData({
+          ...data,
+          email: user.email,
+        });
+      } catch (error: any) {
+        toast({
+          variant: "destructive",
+          title: "Error fetching profile",
+          description: error.message,
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchUserData();
+  }, [navigate, toast]);
 
-  // Function to handle saving settings
-  const updateProfileMutation = useMutation({
-    mutationFn: async (data: typeof formData) => {
+  const form = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileFormSchema),
+    defaultValues: {
+      username: "",
+      email: "",
+      bio: "",
+    },
+    values: userData ? {
+      username: userData.username || "",
+      email: userData.email || "",
+      bio: userData.bio || "",
+    } : undefined,
+  });
+
+  async function onSubmit(data: ProfileFormValues) {
+    try {
+      setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
+      
+      if (!user) {
+        navigate("/auth");
+        return;
+      }
+      
       const { error } = await supabase
         .from("profiles")
         .update({
-          full_name: data.fullName,
           username: data.username,
-          daily_calories: data.dailyCalories,
-          workout_goal: data.workoutGoal,
-          hour_goal: data.hourGoal,
-          height: data.height,
-          age: data.age,
+          bio: data.bio,
+          updated_at: new Date().toISOString(),
         })
         .eq("id", user.id);
-
+        
       if (error) throw error;
-      return true;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["userProfile"] });
+      
       toast({
-        title: "Settings updated",
-        description: "Your profile settings have been updated successfully."
+        title: "Profile updated",
+        description: "Your profile has been updated successfully.",
       });
-      navigate("/");
-    },
-    onError: (error) => {
+    } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Error updating settings",
-        description: error.message
+        title: "Error updating profile",
+        description: error.message,
       });
+    } finally {
+      setLoading(false);
     }
-  });
+  }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    updateProfileMutation.mutate(formData);
+  const handleSignOut = async () => {
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      navigate("/auth");
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error signing out",
+        description: error.message,
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50/50 dark:bg-slate-900 py-8">
-      <div className="container max-w-2xl">
-        <div className="mb-6 flex items-center">
-          <Button 
-            variant="ghost" 
-            className="mr-2 dark:text-white"
-            onClick={() => navigate(-1)}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          <h1 className="text-3xl font-bold dark:text-white">Settings</h1>
-        </div>
-
-        <Card className="dark:border-gray-700 dark:bg-gray-800">
-          <CardHeader>
-            <CardTitle className="dark:text-white">Profile Settings</CardTitle>
-          </CardHeader>
-          <form onSubmit={handleSubmit}>
+    <div className="container py-8">
+      <h1 className="text-3xl font-bold mb-6">Settings</h1>
+      
+      <Tabs defaultValue="profile" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="profile" className="flex items-center gap-2">
+            <User className="h-4 w-4" />
+            Profile
+          </TabsTrigger>
+          <TabsTrigger value="appearance" className="flex items-center gap-2">
+            <Sun className="h-4 w-4" />
+            Appearance
+          </TabsTrigger>
+          <TabsTrigger value="notifications" className="flex items-center gap-2">
+            <Bell className="h-4 w-4" />
+            Notifications
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="profile" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Profile</CardTitle>
+              <CardDescription>
+                Manage your public profile information.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="username"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Username</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Your username" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          This is your public display name.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Your email" {...field} disabled />
+                        </FormControl>
+                        <FormDescription>
+                          Your email address is managed through your authentication provider.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="bio"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Bio</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Tell us about yourself" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Brief description for your profile. Max 160 characters.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" disabled={loading}>
+                    Save changes
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Account</CardTitle>
+              <CardDescription>
+                Manage your account settings.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Button 
+                variant="destructive" 
+                className="w-full sm:w-auto"
+                onClick={handleSignOut}
+                disabled={loading}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Sign out
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="appearance" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Appearance</CardTitle>
+              <CardDescription>
+                Customize how the app looks and feels.
+              </CardDescription>
+            </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="fullName" className="dark:text-gray-300">Full Name</Label>
-                <Input
-                  id="fullName"
-                  value={formData.fullName}
-                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                  placeholder="Your full name"
-                  className="dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                />
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col space-y-1">
+                    <span className="font-medium">Dark mode</span>
+                    <span className="text-sm text-gray-500">
+                      Switch between light and dark mode
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Sun className="h-4 w-4" />
+                    <Switch id="dark-mode" />
+                    <Moon className="h-4 w-4" />
+                  </div>
+                </div>
               </div>
-
+              
               <div className="space-y-2">
-                <Label htmlFor="username" className="dark:text-gray-300">Username</Label>
-                <Input
-                  id="username"
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  placeholder="Your username"
-                  className="dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="age" className="dark:text-gray-300">Age</Label>
-                <Input
-                  id="age"
-                  type="number"
-                  value={formData.age}
-                  onChange={(e) => setFormData({ ...formData, age: Number(e.target.value) })}
-                  placeholder="30"
-                  min="1"
-                  max="120"
-                  className="dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="height" className="dark:text-gray-300">Height (cm)</Label>
-                <Input
-                  id="height"
-                  type="number"
-                  value={formData.height}
-                  onChange={(e) => setFormData({ ...formData, height: Number(e.target.value) })}
-                  placeholder="170"
-                  min="50"
-                  max="250"
-                  className="dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-{/* 
-              <div className="space-y-2">
-                <Label htmlFor="dailyCalories" className="dark:text-gray-300">Daily Calorie Target</Label>
-                <Input
-                  id="dailyCalories"
-                  type="number"
-                  value={formData.dailyCalories}
-                  onChange={(e) => setFormData({ ...formData, dailyCalories: Number(e.target.value) })}
-                  placeholder="2000"
-                  min="500"
-                  max="10000"
-                  className="dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                />
-                <p className="text-sm text-muted-foreground dark:text-gray-400">
-                  Set your daily calorie target for nutrition tracking
+                <label className="font-medium">Theme</label>
+                <Select defaultValue="system">
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a theme" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="system">System</SelectItem>
+                    <SelectItem value="light">Light</SelectItem>
+                    <SelectItem value="dark">Dark</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-gray-500">
+                  Select your preferred theme or use system settings.
                 </p>
               </div>
-*/}
-              <div className="space-y-2">
-                <Label htmlFor="workoutGoal" className="dark:text-gray-300">Weekly Workout Goal</Label>
-                <Input
-                  id="workoutGoal"
-                  type="number"
-                  value={formData.workoutGoal}
-                  onChange={(e) => setFormData({ ...formData, workoutGoal: Number(e.target.value) })}
-                  placeholder="5"
-                  min="1"
-                  max="30"
-                  className="dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="hourGoal" className="dark:text-gray-300">Weekly Workout Hours Goal</Label>
-                <Input
-                  id="hourGoal"
-                  type="number"
-                  value={formData.hourGoal}
-                  onChange={(e) => setFormData({ ...formData, hourGoal: Number(e.target.value) })}
-                  placeholder="10"
-                  min="1"
-                  max="50"
-                  className="dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-            
-              {/* Toggle Calorie Calculator 
-              <div className="space-y-2">
-              <Button 
-  type="button" // Prevents form submission
-  variant="outline" 
-  onClick={() => setShowCalorieCalculator(!showCalorieCalculator)}
-  className="dark:border-gray-600 dark:bg-gray-700 dark:text-white"
->
-  {showCalorieCalculator ? "Hide" : "Show"} Calorie Calculator
-</Button>
-
-
-                {showCalorieCalculator && (
-                  <div className="mt-4 p-4 border rounded-lg dark:border-gray-700">
-                    <CalorieCalculator 
-                      onCalculate={(calories: number) => {
-                        setFormData(prev => ({ ...prev, dailyCalories: calories }));
-                      }} 
-                    />
-                  </div>
-                )}
-              </div>
-              */}
             </CardContent>
-
-            {/* Save Button (Always Visible) */}
-            <CardFooter className="flex justify-end">
-              <Button 
-                type="submit" 
-                disabled={updateProfileMutation.isPending}
-              >
-                {updateProfileMutation.isPending ? "Saving..." : "Save Settings"}
-                <Save className="ml-2 h-4 w-4" />
-              </Button>
-            </CardFooter>
-          </form>
-        </Card>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="notifications" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Notifications</CardTitle>
+              <CardDescription>
+                Configure how you receive notifications.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <label className="font-medium">Workout reminders</label>
+                    <p className="text-sm text-gray-500">
+                      Receive reminders for scheduled workouts
+                    </p>
+                  </div>
+                  <Switch id="workout-notifications" defaultChecked />
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <label className="font-medium">Progress updates</label>
+                    <p className="text-sm text-gray-500">
+                      Get notified about your fitness progress
+                    </p>
+                  </div>
+                  <Switch id="progress-notifications" defaultChecked />
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <label className="font-medium">New features</label>
+                    <p className="text-sm text-gray-500">
+                      Learn about new app features and updates
+                    </p>
+                  </div>
+                  <Switch id="feature-notifications" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+      
+      {/* Add the Admin Access section */}
+      <div className="mt-8">
+        <h2 className="text-xl font-semibold mb-4">Admin Access</h2>
+        <div className="max-w-md">
+          <AdminAccessButton />
+        </div>
       </div>
     </div>
   );
 }
-
-export default Settings;
