@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Trash2, Plus, Save, Search } from "lucide-react";
+import { Trash2, Plus, Save, Search, Clock, Pencil, ListPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -12,6 +12,9 @@ import { ExerciseTemplate } from "@/types/workout";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ExerciseSearch } from "@/components/ExerciseSearch";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { useMobile } from "@/hooks/use-mobile";
 
 interface EditWorkoutDialogProps {
   workoutId: string;
@@ -41,8 +44,10 @@ export function EditWorkoutDialog({ workoutId, open, onOpenChange }: EditWorkout
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [templates, setTemplates] = useState<ExerciseTemplate[]>([]);
+  const { isMobile } = useMobile();
   
   useEffect(() => {
     if (open && workoutId) {
@@ -104,6 +109,8 @@ export function EditWorkoutDialog({ workoutId, open, onOpenChange }: EditWorkout
     if (!workout) return;
     
     try {
+      setIsSaving(true);
+      
       const { error: workoutError } = await supabase
         .from("workouts")
         .update({
@@ -152,7 +159,7 @@ export function EditWorkoutDialog({ workoutId, open, onOpenChange }: EditWorkout
       
       toast({
         title: "Workout updated",
-        description: "Your workout has been updated successfully."
+        description: "Your routine has been updated successfully."
       });
       
       queryClient.invalidateQueries({ queryKey: ["routines"] });
@@ -162,8 +169,10 @@ export function EditWorkoutDialog({ workoutId, open, onOpenChange }: EditWorkout
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to update workout"
+        description: "Failed to update routine"
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -261,62 +270,76 @@ export function EditWorkoutDialog({ workoutId, open, onOpenChange }: EditWorkout
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Edit Workout</DialogTitle>
+      <DialogContent className={`sm:max-w-[700px] ${isMobile ? 'p-3' : ''} max-h-[85vh] overflow-y-auto`}>
+        <DialogHeader className="mb-4">
+          <DialogTitle>Edit Routine</DialogTitle>
         </DialogHeader>
         
         {isLoading ? (
-          <div className="flex justify-center p-4">
+          <div className="flex justify-center p-6">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
           </div>
         ) : workout ? (
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="workoutTitle">Workout Title</Label>
-                <Input
-                  id="workoutTitle"
-                  value={workout.title}
-                  onChange={(e) => setWorkout({ ...workout, title: e.target.value })}
-                />
+          <div className="space-y-5">
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="workoutTitle" className="flex items-center">
+                    <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                    Routine Name
+                  </Label>
+                  <Input
+                    id="workoutTitle"
+                    value={workout.title}
+                    onChange={(e) => setWorkout({ ...workout, title: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="workoutDuration" className="flex items-center">
+                    <Clock className="mr-1.5 h-3.5 w-3.5" />
+                    Duration (minutes)
+                  </Label>
+                  <Input
+                    id="workoutDuration"
+                    type="number"
+                    min="1"
+                    value={workout.duration}
+                    onChange={(e) => setWorkout({ ...workout, duration: Number(e.target.value) })}
+                  />
+                </div>
               </div>
+              
               <div className="space-y-2">
-                <Label htmlFor="workoutDuration">Duration (minutes)</Label>
-                <Input
-                  id="workoutDuration"
-                  type="number"
-                  min="1"
-                  value={workout.duration}
-                  onChange={(e) => setWorkout({ ...workout, duration: Number(e.target.value) })}
+                <Label htmlFor="workoutNotes">Notes (optional)</Label>
+                <Textarea
+                  id="workoutNotes"
+                  value={workout.notes || ""}
+                  onChange={(e) => setWorkout({ ...workout, notes: e.target.value })}
+                  placeholder="Any notes about this workout..."
+                  className="max-h-[100px]"
                 />
               </div>
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="workoutNotes">Notes (optional)</Label>
-              <Textarea
-                id="workoutNotes"
-                value={workout.notes || ""}
-                onChange={(e) => setWorkout({ ...workout, notes: e.target.value })}
-                placeholder="Any notes about this workout..."
-              />
-            </div>
+            <Separator />
             
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium">Exercises</h3>
+                <h3 className="text-lg font-medium flex items-center">
+                  <ListPlus className="mr-1.5 h-4.5 w-4.5" />
+                  Exercises ({workout.exercises.length})
+                </h3>
                 <div className="flex gap-2">
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button size="sm" variant="outline">
-                        <Search className="h-4 w-4 mr-2" />
-                        Add From Templates
+                        <Search className="h-3.5 w-3.5 mr-1.5" />
+                        From Templates
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-80 p-0" align="end">
-                      <div className="p-4">
-                        <h4 className="font-medium mb-2">Search Exercise Templates</h4>
+                      <div className="p-3">
+                        <h4 className="font-medium mb-3">Search Exercise Templates</h4>
                         <ExerciseSearch 
                           templates={templates} 
                           onSelectTemplate={addTemplateExercise}
@@ -327,100 +350,106 @@ export function EditWorkoutDialog({ workoutId, open, onOpenChange }: EditWorkout
                   </Popover>
                   
                   <Button onClick={addNewExercise} size="sm" variant="outline">
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className="h-3.5 w-3.5 mr-1.5" />
                     Add Manual
                   </Button>
                 </div>
               </div>
               
               {workout.exercises.length === 0 ? (
-                <div className="text-center py-4 text-gray-500 border rounded-md">
+                <div className="text-center py-6 text-gray-500 border rounded-md">
                   No exercises yet. Add your first exercise!
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {workout.exercises.map((exercise, index) => (
-                    <div key={exercise.id} className="border p-4 rounded-md space-y-4 dark:border-gray-700">
-                      <div className="flex justify-between items-start">
-                        <h4 className="font-medium">Exercise {index + 1}</h4>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeExercise(index)}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor={`exercise-name-${index}`}>Exercise Name</Label>
-                          <Input
-                            id={`exercise-name-${index}`}
-                            value={exercise.name}
-                            onChange={(e) => handleExerciseChange(index, 'name', e.target.value)}
-                          />
+                <ScrollArea className={workout.exercises.length > 2 ? (isMobile ? 'max-h-[300px]' : 'max-h-[400px]') : ''}>
+                  <div className="space-y-4 pr-4">
+                    {workout.exercises.map((exercise, index) => (
+                      <div key={exercise.id} className="border p-4 rounded-md space-y-4 dark:border-gray-700">
+                        <div className="flex justify-between items-start">
+                          <h4 className="font-medium">Exercise {index + 1}</h4>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeExercise(index)}
+                            className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor={`exercise-sets-${index}`}>Sets</Label>
+                            <Label htmlFor={`exercise-name-${index}`}>Exercise Name</Label>
                             <Input
-                              id={`exercise-sets-${index}`}
-                              type="number"
-                              min="1"
-                              value={exercise.sets}
-                              onChange={(e) => handleExerciseChange(index, 'sets', e.target.value)}
+                              id={`exercise-name-${index}`}
+                              value={exercise.name}
+                              onChange={(e) => handleExerciseChange(index, 'name', e.target.value)}
                             />
                           </div>
+                          
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                              <Label htmlFor={`exercise-sets-${index}`}>Sets</Label>
+                              <Input
+                                id={`exercise-sets-${index}`}
+                                type="number"
+                                min="1"
+                                value={exercise.sets}
+                                onChange={(e) => handleExerciseChange(index, 'sets', e.target.value)}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor={`exercise-reps-${index}`}>Reps</Label>
+                              <Input
+                                id={`exercise-reps-${index}`}
+                                type="number"
+                                min="1"
+                                value={exercise.reps}
+                                onChange={(e) => handleExerciseChange(index, 'reps', e.target.value)}
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                              <Label htmlFor={`exercise-weight-${index}`}>Weight (kg)</Label>
+                              <Input
+                                id={`exercise-weight-${index}`}
+                                type="number"
+                                min="0"
+                                step="0.5"
+                                value={exercise.weight || 0}
+                                onChange={(e) => handleExerciseChange(index, 'weight', e.target.value)}
+                              />
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <Label htmlFor={`exercise-rest-${index}`}>Rest Time (seconds)</Label>
+                              <Input
+                                id={`exercise-rest-${index}`}
+                                type="number"
+                                min="0"
+                                value={exercise.rest_time || 60}
+                                onChange={(e) => handleExerciseChange(index, 'rest_time', e.target.value)}
+                              />
+                            </div>
+                          </div>
+                          
                           <div className="space-y-2">
-                            <Label htmlFor={`exercise-reps-${index}`}>Reps</Label>
-                            <Input
-                              id={`exercise-reps-${index}`}
-                              type="number"
-                              min="1"
-                              value={exercise.reps}
-                              onChange={(e) => handleExerciseChange(index, 'reps', e.target.value)}
+                            <Label htmlFor={`exercise-notes-${index}`}>Notes</Label>
+                            <Textarea
+                              id={`exercise-notes-${index}`}
+                              value={exercise.notes || ""}
+                              onChange={(e) => handleExerciseChange(index, 'notes', e.target.value)}
+                              placeholder="Any notes about this exercise..."
+                              className="max-h-[80px]"
                             />
                           </div>
                         </div>
-                        
-                        <div className="space-y-2">
-                          <Label htmlFor={`exercise-weight-${index}`}>Weight (kg)</Label>
-                          <Input
-                            id={`exercise-weight-${index}`}
-                            type="number"
-                            min="0"
-                            step="0.5"
-                            value={exercise.weight || 0}
-                            onChange={(e) => handleExerciseChange(index, 'weight', e.target.value)}
-                          />
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label htmlFor={`exercise-rest-${index}`}>Rest Time (seconds)</Label>
-                          <Input
-                            id={`exercise-rest-${index}`}
-                            type="number"
-                            min="0"
-                            value={exercise.rest_time || 60}
-                            onChange={(e) => handleExerciseChange(index, 'rest_time', e.target.value)}
-                          />
-                        </div>
-                        
-                        <div className="md:col-span-2 space-y-2">
-                          <Label htmlFor={`exercise-notes-${index}`}>Notes</Label>
-                          <Textarea
-                            id={`exercise-notes-${index}`}
-                            value={exercise.notes || ""}
-                            onChange={(e) => handleExerciseChange(index, 'notes', e.target.value)}
-                            placeholder="Any notes about this exercise..."
-                          />
-                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                </ScrollArea>
               )}
             </div>
           </div>
@@ -430,13 +459,22 @@ export function EditWorkoutDialog({ workoutId, open, onOpenChange }: EditWorkout
           </div>
         )}
         
-        <DialogFooter>
+        <DialogFooter className="mt-6 sm:mt-8">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={updateWorkout} disabled={isLoading || !workout}>
-            <Save className="h-4 w-4 mr-2" />
-            Save Changes
+          <Button onClick={updateWorkout} disabled={isLoading || !workout || isSaving}>
+            {isSaving ? (
+              <>
+                <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Save Changes
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
