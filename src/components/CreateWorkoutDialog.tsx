@@ -1,22 +1,25 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Save, Clock, ListPlus, Pencil } from "lucide-react";
+import { Plus, Search, Save, Clock, ListPlus, Pencil, Dumbbell, BarChart4 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Exercise, ExerciseTemplate } from "@/types/workout";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { v4 as uuidv4 } from "uuid";
 import { Slider } from "@/components/ui/slider";
 import { ExerciseSearch } from "@/components/ExerciseSearch";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
 interface ExerciseInputProps {
   onAddExercise: (exercise: Exercise) => void;
@@ -75,102 +78,116 @@ const ExerciseInput = ({ onAddExercise, defaultRestTime, templates }: ExerciseIn
 
   const handleSelectTemplate = (template: ExerciseTemplate) => {
     setName(template.name);
+    setNotes(template.description || "");
     setActiveTab("manual");
   };
 
   return (
-    <Tabs defaultValue="manual" value={activeTab} onValueChange={setActiveTab} className="w-full">
-      <TabsList className="grid w-full grid-cols-2 mb-4">
-        <TabsTrigger value="manual">
-          <Pencil className="h-3.5 w-3.5 mr-1.5" />
-          Manual Entry
-        </TabsTrigger>
-        <TabsTrigger value="templates">
-          <Search className="h-3.5 w-3.5 mr-1.5" />
-          Templates
-        </TabsTrigger>
-      </TabsList>
-      <TabsContent value="manual" className="space-y-4">
-        <div className="grid grid-cols-1 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Exercise Name</Label>
-            <Input
-              id="name"
-              placeholder="e.g., Bench Press"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="sets">Sets</Label>
-              <Input
-                id="sets"
-                type="number"
-                placeholder="3"
-                value={sets}
-                onChange={(e) => setSets(e.target.value)}
-              />
+    <Card className="border-primary/20">
+      <CardHeader className="pb-3">
+        <h4 className="text-base font-medium">Add New Exercise</h4>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <Tabs defaultValue="manual" value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="manual" className="flex items-center gap-1.5">
+              <Pencil className="h-3.5 w-3.5" />
+              Manual Entry
+            </TabsTrigger>
+            <TabsTrigger value="templates" className="flex items-center gap-1.5">
+              <Search className="h-3.5 w-3.5" />
+              Templates
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="manual" className="space-y-4">
+            <div className="grid grid-cols-1 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Exercise Name</Label>
+                <Input
+                  id="name"
+                  placeholder="e.g., Bench Press"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="border-primary/20 focus:border-primary"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="sets">Sets</Label>
+                  <Input
+                    id="sets"
+                    type="number"
+                    placeholder="3"
+                    value={sets}
+                    onChange={(e) => setSets(e.target.value)}
+                    className="border-primary/20 focus:border-primary"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="reps">Reps</Label>
+                  <Input
+                    id="reps"
+                    type="number"
+                    placeholder="10"
+                    value={reps}
+                    onChange={(e) => setReps(e.target.value)}
+                    className="border-primary/20 focus:border-primary"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="weight">Weight (kg, optional)</Label>
+                <Input
+                  id="weight"
+                  type="number"
+                  placeholder="e.g., 60"
+                  value={weight}
+                  onChange={(e) => setWeight(e.target.value)}
+                  className="border-primary/20 focus:border-primary"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="rest-time">Rest Time ({restTime} seconds)</Label>
+                <Slider 
+                  id="rest-time"
+                  min={10} 
+                  max={180} 
+                  step={5} 
+                  defaultValue={[defaultRestTime]} 
+                  value={[restTime]}
+                  onValueChange={(value) => setRestTime(value[0])}
+                />
+              </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="reps">Reps</Label>
-              <Input
-                id="reps"
-                type="number"
-                placeholder="10"
-                value={reps}
-                onChange={(e) => setReps(e.target.value)}
+              <Label htmlFor="notes">Notes (optional)</Label>
+              <Textarea
+                id="notes"
+                placeholder="Any additional notes..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="max-h-[100px] border-primary/20 focus:border-primary"
               />
             </div>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="weight">Weight (kg, optional)</Label>
-            <Input
-              id="weight"
-              type="number"
-              placeholder="e.g., 60"
-              value={weight}
-              onChange={(e) => setWeight(e.target.value)}
+            <Button type="button" onClick={handleAddExercise} className="w-full">
+              <Plus className="mr-1.5 h-4 w-4" />
+              Add Exercise
+            </Button>
+          </TabsContent>
+          
+          <TabsContent value="templates" className="mt-0">
+            <ExerciseSearch 
+              templates={templates} 
+              onSelectTemplate={handleSelectTemplate} 
+              placeholder="Search exercises..."
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="rest-time">Rest Time ({restTime} seconds)</Label>
-            <Slider 
-              id="rest-time"
-              min={10} 
-              max={180} 
-              step={5} 
-              defaultValue={[defaultRestTime]} 
-              value={[restTime]}
-              onValueChange={(value) => setRestTime(value[0])}
-            />
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="notes">Notes (optional)</Label>
-          <Textarea
-            id="notes"
-            placeholder="Any additional notes..."
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            className="max-h-[100px]"
-          />
-        </div>
-        <Button type="button" onClick={handleAddExercise} className="w-full">
-          <Plus className="mr-1.5 h-4 w-4" />
-          Add Exercise
-        </Button>
-      </TabsContent>
-      <TabsContent value="templates" className="mt-0">
-        <ExerciseSearch 
-          templates={templates} 
-          onSelectTemplate={handleSelectTemplate} 
-          placeholder="Search exercises..."
-        />
-      </TabsContent>
-    </Tabs>
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
   );
 };
 
@@ -286,7 +303,7 @@ export const CreateWorkoutDialog = () => {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button>
+        <Button className="bg-primary/90 hover:bg-primary">
           <Plus className="mr-2 h-4 w-4" />
           Create Routine
         </Button>
@@ -294,128 +311,152 @@ export const CreateWorkoutDialog = () => {
       <DialogContent className={`sm:max-w-[600px] ${isMobile ? 'p-3' : 'p-6'}`}>
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogHeader className="mb-4">
-            <DialogTitle>Create New Routine</DialogTitle>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <Dumbbell className="h-5 w-5" />
+              Create New Routine
+            </DialogTitle>
             <DialogDescription>
               Design a custom workout with the exercises you want.
             </DialogDescription>
           </DialogHeader>
           <div className={`grid gap-5 ${isMobile ? 'max-h-[65vh]' : 'max-h-[70vh]'} overflow-y-auto p-1`}>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title" className="flex items-center">
-                    <Pencil className="mr-1.5 h-3.5 w-3.5" />
-                    Routine Name
-                  </Label>
-                  <Input
-                    id="title"
-                    {...register("title", { required: "Title is required" })}
-                    placeholder="e.g., Upper Body Workout"
-                  />
-                  {errors.title && (
-                    <p className="text-sm text-destructive">{errors.title.message}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="duration" className="flex items-center">
-                    <Clock className="mr-1.5 h-3.5 w-3.5" />
-                    Duration (minutes)
-                  </Label>
-                  <Input
-                    id="duration"
-                    type="number"
-                    {...register("duration", { required: "Duration is required" })}
-                    placeholder="30"
-                  />
-                  {errors.duration && (
-                    <p className="text-sm text-destructive">{errors.duration.message}</p>
-                  )}
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="default-rest" className="flex items-center">
-                  Rest Time Between Sets ({defaultRestTime} seconds)
-                </Label>
-                <Slider 
-                  id="default-rest"
-                  min={10} 
-                  max={180} 
-                  step={5} 
-                  defaultValue={[60]} 
-                  value={[defaultRestTime]}
-                  onValueChange={(value) => setDefaultRestTime(value[0])}
-                />
-              </div>
+            <Card className="border-2 border-primary/20">
+              <CardContent className="pt-6">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="title" className="flex items-center text-base">
+                        <Pencil className="mr-1.5 h-4 w-4" />
+                        Routine Name
+                      </Label>
+                      <Input
+                        id="title"
+                        {...register("title", { required: "Title is required" })}
+                        placeholder="e.g., Upper Body Workout"
+                        className="border-primary/20 focus:border-primary"
+                      />
+                      {errors.title && (
+                        <p className="text-sm text-destructive">{errors.title.message}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="duration" className="flex items-center text-base">
+                        <Clock className="mr-1.5 h-4 w-4" />
+                        Duration (minutes)
+                      </Label>
+                      <Input
+                        id="duration"
+                        type="number"
+                        {...register("duration", { required: "Duration is required" })}
+                        placeholder="30"
+                        className="border-primary/20 focus:border-primary"
+                      />
+                      {errors.duration && (
+                        <p className="text-sm text-destructive">{errors.duration.message}</p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="default-rest" className="flex items-center text-base">
+                      Rest Time Between Sets ({defaultRestTime} seconds)
+                    </Label>
+                    <Slider 
+                      id="default-rest"
+                      min={10} 
+                      max={180} 
+                      step={5} 
+                      defaultValue={[60]} 
+                      value={[defaultRestTime]}
+                      onValueChange={(value) => setDefaultRestTime(value[0])}
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="notes" className="flex items-center">
-                  Notes (optional)
-                </Label>
-                <Textarea
-                  id="notes"
-                  {...register("notes")}
-                  placeholder="Any additional notes about the workout..."
-                  className="max-h-[100px]"
-                />
-              </div>
-            </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="notes" className="flex items-center text-base">
+                      <ListPlus className="mr-1.5 h-4 w-4" />
+                      Notes (optional)
+                    </Label>
+                    <Textarea
+                      id="notes"
+                      {...register("notes")}
+                      placeholder="Any additional notes about the workout..."
+                      className="max-h-[100px] border-primary/20 focus:border-primary"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Separator className="my-1" />
 
             <div className="space-y-4">
-              <h3 className="font-medium flex items-center">
-                <ListPlus className="mr-1.5 h-4 w-4" />
-                Exercises
+              <h3 className="font-medium flex items-center text-lg">
+                <BarChart4 className="mr-1.5 h-4.5 w-4.5" />
+                Exercises <Badge variant="outline" className="ml-2">{exercises.length}</Badge>
               </h3>
-              <div className="rounded-md border p-4">
-                <ExerciseInput 
-                  onAddExercise={(exercise) => setExercises([...exercises, exercise])} 
-                  defaultRestTime={defaultRestTime} 
-                  templates={templates} 
-                />
-              </div>
+              
+              <ExerciseInput 
+                onAddExercise={(exercise) => setExercises([...exercises, exercise])} 
+                defaultRestTime={defaultRestTime} 
+                templates={templates} 
+              />
               
               {exercises.length > 0 && (
-                <div className="space-y-2 mt-4">
-                  <h4 className="text-sm font-medium">Added Exercises ({exercises.length})</h4>
+                <div className="mt-4">
                   <ScrollArea className={`${exercises.length > 3 ? 'h-[200px]' : ''}`}>
-                    <ul className="space-y-2 pr-4">
+                    <div className="space-y-2 pr-4">
                       {exercises.map((exercise, index) => (
-                        <li key={exercise.id} className="flex justify-between items-center p-3 rounded-md border">
-                          <div>
-                            <div className="font-medium">{exercise.name}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {exercise.sets} × {exercise.reps}
-                              {exercise.weight ? ` @ ${exercise.weight}kg` : ''}
-                              {exercise.rest_time ? ` | ${exercise.rest_time}s rest` : ''}
+                        <Card key={exercise.id} className="border-gray-200 dark:border-gray-700">
+                          <CardContent className="p-3 flex justify-between items-center">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="mr-1">#{index + 1}</Badge>
+                                <div className="font-medium">{exercise.name}</div>
+                              </div>
+                              <div className="text-sm text-muted-foreground mt-1 flex flex-wrap gap-2">
+                                <span className="bg-secondary/10 p-1 px-2 rounded-sm">
+                                  {exercise.sets} × {exercise.reps}
+                                </span>
+                                {exercise.weight ? (
+                                  <span className="bg-secondary/10 p-1 px-2 rounded-sm">
+                                    {exercise.weight}kg
+                                  </span>
+                                ) : null}
+                                <span className="bg-secondary/10 p-1 px-2 rounded-sm flex items-center">
+                                  <Clock className="h-3 w-3 mr-1 opacity-70" />
+                                  {exercise.rest_time}s
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleRemoveExercise(exercise.id)}
-                            className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
-                          >
-                            Remove
-                          </Button>
-                        </li>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveExercise(exercise.id)}
+                              className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+                            >
+                              Remove
+                            </Button>
+                          </CardContent>
+                        </Card>
                       ))}
-                    </ul>
+                    </div>
                   </ScrollArea>
                 </div>
               )}
             </div>
           </div>
           <DialogFooter className="mt-6">
-            <Button type="submit" disabled={loading} className="w-full sm:w-auto">
+            <Button type="submit" disabled={loading} className="w-full sm:w-auto gap-1.5">
               {loading ? (
                 <>
-                  <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
                   Creating...
                 </>
               ) : (
                 <>
-                  <Save className="mr-2 h-4 w-4" />
+                  <Save className="h-4 w-4" />
                   Create Routine
                 </>
               )}
