@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine, ResponsiveContainer } from "recharts";
@@ -9,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { format, parseISO, subMonths } from "date-fns";
 import { WeightRecord } from "@/types/workout";
+import { Trash2 } from "lucide-react";
 
 export const WeightTracker = () => {
   const [weightRecords, setWeightRecords] = useState<WeightRecord[]>([]);
@@ -38,12 +38,10 @@ export const WeightTracker = () => {
       
       setWeightRecords(data || []);
       
-      // Set current weight from the latest record
       if (data && data.length > 0) {
         const latestRecord = data[data.length - 1];
         setNewWeight(latestRecord.weight.toString());
         
-        // Calculate BMI with the latest weight record if height is available
         if (height) {
           calculateBMI(latestRecord.weight, parseFloat(height));
         }
@@ -72,12 +70,10 @@ export const WeightTracker = () => {
       if (data && data.height) {
         setHeight(data.height.toString());
         
-        // Calculate BMI with the latest weight record if available
         if (weightRecords.length > 0) {
           const latestWeight = weightRecords[weightRecords.length - 1].weight;
           calculateBMI(latestWeight, data.height);
         } else if (newWeight) {
-          // If no records yet but we have a new weight value
           calculateBMI(parseFloat(newWeight), data.height);
         }
       }
@@ -87,7 +83,6 @@ export const WeightTracker = () => {
   };
 
   const calculateBMI = (weight: number, height: number) => {
-    // BMI = weight(kg) / (height(m) * height(m))
     const heightInMeters = height / 100;
     const bmiValue = weight / (heightInMeters * heightInMeters);
     setBmi(parseFloat(bmiValue.toFixed(1)));
@@ -110,7 +105,6 @@ export const WeightTracker = () => {
       const weight = parseFloat(newWeight);
       const today = new Date().toISOString().split('T')[0];
 
-      // Add weight record
       const { error: recordError } = await supabase
         .from("weight_records")
         .insert({
@@ -121,7 +115,6 @@ export const WeightTracker = () => {
 
       if (recordError) throw recordError;
       
-      // Calculate BMI if height is available
       if (height) {
         calculateBMI(weight, parseFloat(height));
       }
@@ -141,7 +134,30 @@ export const WeightTracker = () => {
     }
   };
 
-  // Whenever the weight records or height changes, update the BMI if possible
+  const handleDeleteWeight = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("weight_records")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Weight record deleted",
+        description: "The weight record has been successfully deleted.",
+      });
+
+      fetchWeightRecords();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error deleting weight record",
+        description: error.message,
+      });
+    }
+  };
+
   useEffect(() => {
     if (weightRecords.length > 0 && height) {
       const latestWeight = weightRecords[weightRecords.length - 1].weight;
@@ -157,19 +173,17 @@ export const WeightTracker = () => {
   };
 
   const getBmiCategoryColor = (bmi: number) => {
-    if (bmi < 18.5) return "#3b82f6"; // Blue for underweight
-    if (bmi < 25) return "#10b981"; // Green for normal
-    if (bmi < 30) return "#f59e0b"; // Orange for overweight
-    return "#ef4444"; // Red for obese
+    if (bmi < 18.5) return "#3b82f6";
+    if (bmi < 25) return "#10b981";
+    if (bmi < 30) return "#f59e0b";
+    return "#ef4444";
   };
 
-  // Prepare data for the chart
   const chartData = weightRecords.map(record => ({
     date: record.date,
     weight: record.weight,
   }));
 
-  // Calculate BMI threshold weights for the current height
   const getBmiThresholdWeight = (bmiThreshold: number): number | null => {
     if (!height) return null;
     const heightInMeters = parseFloat(height) / 100;
@@ -179,12 +193,10 @@ export const WeightTracker = () => {
   const underweightThreshold = getBmiThresholdWeight(18.5);
   const overweightThreshold = getBmiThresholdWeight(25);
 
-  // Get latest weight for BMI display
   const latestWeight = weightRecords.length > 0 ? 
     weightRecords[weightRecords.length - 1].weight : 
     (newWeight ? parseFloat(newWeight) : null);
 
-  // Always calculate BMI based on latest weight entry if height is available
   useEffect(() => {
     if (latestWeight && height) {
       calculateBMI(latestWeight, parseFloat(height));
@@ -274,7 +286,6 @@ export const WeightTracker = () => {
                         activeDot={{ r: 8 }} 
                       />
                       
-                      {/* Always show BMI threshold lines if height is available */}
                       {height && (
                         <>
                           {underweightThreshold && (
@@ -325,6 +336,7 @@ export const WeightTracker = () => {
                       <tr className="text-left">
                         <th className="pb-2">Date</th>
                         <th className="pb-2">Weight (kg)</th>
+                        <th className="pb-2">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -332,6 +344,16 @@ export const WeightTracker = () => {
                         <tr key={record.id} className="border-t">
                           <td className="py-2">{format(parseISO(record.date), 'PP')}</td>
                           <td className="py-2">{record.weight} kg</td>
+                          <td className="py-2">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => handleDeleteWeight(record.id)}
+                              title="Delete weight record"
+                            >
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
