@@ -45,21 +45,17 @@ export function ExerciseHistoryTracker() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
+      // Simplified query to just get distinct exercise names from exercises table
       const { data, error } = await supabase
         .from("exercises")
         .select("name")
-        .filter("workout_id", "in", (
-          supabase
-            .from("workouts")
-            .select("id")
-            .eq("user_id", user.id)
-        ))
-        .order("name");
+        .eq("workout_id", supabase.from("workouts").select("id").eq("user_id", user.id))
+        .limit(50);
 
       if (error) throw error;
 
       // Get unique exercise names
-      const uniqueExercises = [...new Set(data.map(item => item.name))];
+      const uniqueExercises = [...new Set(data?.map(item => item.name) || [])];
       setExercises(uniqueExercises);
       
       // Select the first exercise by default if available
@@ -113,24 +109,28 @@ export function ExerciseHistoryTracker() {
         .select(`
           id,
           title,
-          completed_workouts!inner(completed_at)
+          completed_workouts (
+            completed_at
+          )
         `)
-        .in("id", workoutIds)
-        .order("completed_workouts.completed_at", { ascending: false });
+        .in("id", workoutIds);
 
       if (workoutsError) throw workoutsError;
 
       // Map the data together
       const formattedHistory: ExerciseHistoryRecord[] = [];
       
-      for (const workout of workoutsData) {
+      for (const workout of workoutsData || []) {
+        // Skip if no completed workouts
         if (!workout.completed_workouts || workout.completed_workouts.length === 0) {
           continue;
         }
         
+        // Find matching exercise
         const exercise = exercisesData.find(e => e.workout_id === workout.id);
         if (!exercise) continue;
         
+        // Add to history
         formattedHistory.push({
           exercise_name: exercise.name,
           weight: exercise.weight || 0,
