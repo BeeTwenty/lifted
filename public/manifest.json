@@ -1,7 +1,7 @@
 
 {
-  "name": "StrengthScribe",
-  "short_name": "Strength",
+  "name": "FitTracker Pro",
+  "short_name": "FitTracker",
   "description": "Track your workouts, nutrition, and fitness goals",
   "start_url": "/",
   "display": "standalone",

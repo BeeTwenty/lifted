@@ -152,7 +152,7 @@ export default function Auth() {
     <div className="min-h-screen bg-gray-50/50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md p-6 space-y-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">Welcome to StrengthScribe</h1>
+          <h1 className="text-2xl font-bold">Welcome to FitTracker Pro</h1>
           <p className="text-gray-500 mt-2">Sign in or create an account to continue</p>
         </div>
 
