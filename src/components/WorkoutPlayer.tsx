@@ -1,13 +1,15 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Play, Pause, SkipForward, RotateCcw, CheckCircle, Timer, HelpCircle } from "lucide-react";
+import { Play, Pause, SkipForward, RotateCcw, CheckCircle, Timer, HelpCircle, Edit2, Save } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { useQueryClient } from "@tanstack/react-query";
+import { Input } from "@/components/ui/input";
 
 interface Exercise {
   id: string;
@@ -45,6 +47,8 @@ export const WorkoutPlayer = ({ workoutId, onClose }: WorkoutPlayerProps) => {
   const [showMedia, setShowMedia] = useState(false);
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [actualDuration, setActualDuration] = useState<number>(0);
+  const [isEditingWeight, setIsEditingWeight] = useState(false);
+  const [editedWeight, setEditedWeight] = useState<number | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -69,6 +73,15 @@ export const WorkoutPlayer = ({ workoutId, onClose }: WorkoutPlayerProps) => {
     
     return () => clearTimeout(timer);
   }, [isResting, restTimeRemaining, isPaused]);
+
+  useEffect(() => {
+    if (workout && workout.exercises.length > 0) {
+      const currentExercise = workout.exercises[currentExerciseIndex];
+      if (currentExercise) {
+        setEditedWeight(currentExercise.weight);
+      }
+    }
+  }, [currentExerciseIndex, workout]);
 
   const fetchWorkout = async (id: string) => {
     setLoading(true);
@@ -174,6 +187,47 @@ export const WorkoutPlayer = ({ workoutId, onClose }: WorkoutPlayerProps) => {
     }
     
     onClose();
+  };
+
+  const updateExerciseWeight = async () => {
+    if (!workout || editedWeight === null) return;
+    
+    try {
+      const exercise = workout.exercises[currentExerciseIndex];
+      
+      const { error } = await supabase
+        .from("exercises")
+        .update({ weight: editedWeight })
+        .eq("id", exercise.id);
+      
+      if (error) throw error;
+      
+      // Update local state
+      const updatedExercises = [...workout.exercises];
+      updatedExercises[currentExerciseIndex] = {
+        ...updatedExercises[currentExerciseIndex],
+        weight: editedWeight
+      };
+      
+      setWorkout({
+        ...workout,
+        exercises: updatedExercises
+      });
+      
+      setIsEditingWeight(false);
+      
+      toast({
+        title: "Weight updated",
+        description: `Set weight to ${editedWeight} kg for ${exercise.name}`,
+      });
+    } catch (error: any) {
+      console.error("Error updating weight:", error);
+      toast({
+        variant: "destructive",
+        title: "Error updating weight",
+        description: error.message,
+      });
+    }
   };
 
   const currentExercise = workout?.exercises[currentExerciseIndex];
@@ -397,16 +451,40 @@ export const WorkoutPlayer = ({ workoutId, onClose }: WorkoutPlayerProps) => {
                     <div className="text-xs text-muted-foreground">Total Sets</div>
                   </div>
                   <div className="h-2 w-2 bg-muted rounded-full"></div>
-                  <div className="text-center">
-                    {currentExercise?.weight ? (
-                      <>
-                        <div className="text-lg font-medium">{currentExercise.weight}</div>
-                        <div className="text-xs text-muted-foreground">Weight (kg)</div>
-                      </>
+                  <div className="text-center relative">
+                    {isEditingWeight ? (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          value={editedWeight || 0}
+                          onChange={(e) => setEditedWeight(Number(e.target.value))}
+                          className="w-20 h-8 text-center"
+                          min="0"
+                          step="0.5"
+                        />
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8" 
+                          onClick={updateExerciseWeight}
+                        >
+                          <Save className="h-4 w-4" />
+                        </Button>
+                      </div>
                     ) : (
                       <>
-                        <div className="text-lg font-medium">—</div>
-                        <div className="text-xs text-muted-foreground">No Weight</div>
+                        <div className="text-lg font-medium flex items-center gap-1">
+                          {currentExercise?.weight || 0}
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-6 w-6" 
+                            onClick={() => setIsEditingWeight(true)}
+                          >
+                            <Edit2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        <div className="text-xs text-muted-foreground">Weight (kg)</div>
                       </>
                     )}
                   </div>
