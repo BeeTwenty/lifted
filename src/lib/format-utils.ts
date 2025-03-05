@@ -7,8 +7,9 @@
 export const formatMuscleName = (muscleName: string | null): string => {
   if (!muscleName) return "";
   
-  // Map any remaining Latin names to English
+  // Map Latin names to English
   const muscleNameMap: Record<string, string> = {
+    // Original mappings
     "Biceps brachii": "Biceps",
     "biceps brachii": "biceps",
     "Triceps brachii": "Triceps",
@@ -32,7 +33,15 @@ export const formatMuscleName = (muscleName: string | null): string => {
     "Trapezius": "Traps",
     "trapezius": "traps",
     "Latissimus dorsi": "Back",
-    "latissimus dorsi": "back"
+    "latissimus dorsi": "back",
+    
+    // Additional mappings from the screenshot
+    "Serratus anterior": "Serratus",
+    "serratus anterior": "serratus",
+    "Soleus": "Calves",
+    "soleus": "calves",
+    "Brachialis": "Biceps",
+    "brachialis": "biceps"
   };
   
   return muscleNameMap[muscleName] || muscleName;
