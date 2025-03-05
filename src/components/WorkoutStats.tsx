@@ -1,10 +1,11 @@
 
 import { Card } from "@/components/ui/card";
-import { Activity, Timer } from "lucide-react";
+import { Activity, Timer, Flame, Calendar } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 import { startOfWeek } from "date-fns";
+import { calculateCurrentStreak, calculateWeeklyStreak } from "@/lib/export-utils";
 
 type CompletedWorkout = {
   id: string;
@@ -41,16 +42,31 @@ export function WorkoutStats() {
 
       if (completedError) throw completedError;
 
+      // Get all completed workouts for streak calculation
+      const { data: allCompletedWorkouts, error: allCompletedError } = await supabase
+        .from("completed_workouts")
+        .select("completed_at")
+        .eq("user_id", user.id)
+        .order("completed_at", { ascending: false });
+
+      if (allCompletedError) throw allCompletedError;
+
       const totalWorkouts = completedWorkouts?.length || 0;
       // Calculate total hours from minutes and round to whole number
       const totalHours = completedWorkouts ? 
         Math.round(completedWorkouts.reduce((acc: number, curr: CompletedWorkout) => acc + (curr.duration / 60), 0)) : 0;
+
+      // Calculate streaks
+      const currentStreak = calculateCurrentStreak(allCompletedWorkouts || []);
+      const weeklyStreak = calculateWeeklyStreak(allCompletedWorkouts || []);
 
       return {
         totalWorkouts,
         totalHours,
         workoutGoal: profile?.workout_goal || 5,
         hourGoal: profile?.hour_goal || 10,
+        currentStreak,
+        weeklyStreak
       };
     },
   });
@@ -93,6 +109,42 @@ export function WorkoutStats() {
             <Progress value={hourProgress} className="h-2 mt-2" />
             <p className="text-xs text-gray-500 mt-1">
               {hoursRemaining > 0 ? `${hoursRemaining} hours remaining` : `Goal reached!`}
+            </p>
+          </div>
+        </div>
+      </Card>
+
+      {/* Daily Streak Card */}
+      <Card className="p-6 w-full">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-orange-100 rounded-full">
+            <Flame className="w-6 h-6 text-orange-500" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm text-gray-500">Daily Streak</p>
+            <h4 className="text-2xl font-semibold">{userStats?.currentStreak ?? "0"} days</h4>
+            <p className="text-xs text-gray-500 mt-1">
+              {userStats?.currentStreak ? 
+                `You've worked out ${userStats.currentStreak} days in a row!` : 
+                "Start your streak by completing a workout today!"}
+            </p>
+          </div>
+        </div>
+      </Card>
+
+      {/* Weekly Streak Card */}
+      <Card className="p-6 w-full">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-blue-100 rounded-full">
+            <Calendar className="w-6 h-6 text-blue-500" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm text-gray-500">Weekly Streak</p>
+            <h4 className="text-2xl font-semibold">{userStats?.weeklyStreak ?? "0"} weeks</h4>
+            <p className="text-xs text-gray-500 mt-1">
+              {userStats?.weeklyStreak ? 
+                `You've worked out for ${userStats.weeklyStreak} consecutive weeks!` : 
+                "Complete at least one workout this week to start your weekly streak!"}
             </p>
           </div>
         </div>

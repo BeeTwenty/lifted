@@ -1,7 +1,6 @@
-
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
-import { format } from "date-fns";
+import { format, isSameDay, isWithinInterval, differenceInDays, addDays, endOfWeek, startOfWeek } from "date-fns";
 
 // Type for CSV export options
 export type ExportOptions = {
@@ -88,4 +87,92 @@ export const prepareWorkoutDataForExport = async (
     
     return formattedData;
   });
+};
+
+// Function to calculate the current streak from workout history
+export const calculateCurrentStreak = (completedWorkouts: { completed_at: string }[]): number => {
+  if (!completedWorkouts || completedWorkouts.length === 0) return 0;
+  
+  // Sort workouts by date in descending order (newest first)
+  const sortedWorkouts = [...completedWorkouts].sort(
+    (a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime()
+  );
+  
+  const today = new Date();
+  const latestWorkoutDate = new Date(sortedWorkouts[0].completed_at);
+  
+  // If the latest workout is more than a day old, streak is broken
+  if (differenceInDays(today, latestWorkoutDate) > 1) {
+    return 0;
+  }
+  
+  // Initialize streak counter
+  let streak = 1;
+  let currentDate = latestWorkoutDate;
+  let dateToCheck = addDays(currentDate, -1); // Start checking the day before
+  
+  // Go through sorted workouts to find consecutive days
+  for (let i = 1; i < sortedWorkouts.length; i++) {
+    const workoutDate = new Date(sortedWorkouts[i].completed_at);
+    
+    // If this workout happened on the date we're checking
+    if (isSameDay(workoutDate, dateToCheck)) {
+      streak++;
+      dateToCheck = addDays(dateToCheck, -1); // Move to the previous day
+    } else if (differenceInDays(currentDate, workoutDate) > 1) {
+      // If there's a gap larger than 1 day, the streak is broken
+      break;
+    }
+  }
+  
+  return streak;
+};
+
+// Function to calculate weekly streak (consecutive weeks with at least one workout)
+export const calculateWeeklyStreak = (completedWorkouts: { completed_at: string }[]): number => {
+  if (!completedWorkouts || completedWorkouts.length === 0) return 0;
+  
+  // Sort workouts by date in descending order (newest first)
+  const sortedWorkouts = [...completedWorkouts].sort(
+    (a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime()
+  );
+  
+  // Track which weeks have workouts
+  const weeksWithWorkouts = new Set<string>();
+  
+  // Add all workout weeks to the set
+  sortedWorkouts.forEach(workout => {
+    const date = new Date(workout.completed_at);
+    const weekStart = format(startOfWeek(date, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+    weeksWithWorkouts.add(weekStart);
+  });
+  
+  // Convert to array and sort
+  const sortedWeeks = Array.from(weeksWithWorkouts).sort().reverse();
+  
+  if (sortedWeeks.length === 0) return 0;
+  
+  // Get the current week
+  const currentWeekStart = format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
+  
+  // If the latest week with workout is not the current week, return 0
+  if (sortedWeeks[0] !== currentWeekStart) {
+    return 0;
+  }
+  
+  // Count consecutive weeks
+  let streak = 1;
+  for (let i = 1; i < sortedWeeks.length; i++) {
+    const currentWeek = new Date(sortedWeeks[i-1]);
+    const prevWeek = new Date(sortedWeeks[i]);
+    
+    // Check if the weeks are consecutive
+    if (differenceInDays(currentWeek, prevWeek) <= 14) { // Allow up to 14 days to account for week boundaries
+      streak++;
+    } else {
+      break;
+    }
+  }
+  
+  return streak;
 };
