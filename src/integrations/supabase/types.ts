@@ -330,6 +330,35 @@ export type Database = {
         }
         Relationships: []
       }
+      workout_muscles: {
+        Row: {
+          created_at: string
+          id: string
+          muscle_name: string
+          workout_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          muscle_name: string
+          workout_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          muscle_name?: string
+          workout_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_muscles_workout_id_fkey"
+            columns: ["workout_id"]
+            isOneToOne: false
+            referencedRelation: "workouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workouts: {
         Row: {
           created_at: string
@@ -382,6 +411,14 @@ export type Database = {
           workout_id: string
           duration: number
           completed_at: string
+        }[]
+      }
+      get_trained_muscles_since: {
+        Args: {
+          start_date: string
+        }
+        Returns: {
+          muscle_name: string
         }[]
       }
       record_completed_workout: {
