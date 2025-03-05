@@ -3,15 +3,17 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { fileURLToPath, URL } from "url";
 import { splashScreen } from "vite-plugin-splash-screen";
+import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     splashScreen({
       logoSrc: 'logo.svg',
     }),
-  ],
+    mode === 'development' && componentTagger(),
+  ].filter(Boolean),
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
@@ -31,4 +33,4 @@ export default defineConfig({
       },
     },
   },
-})
+}))
