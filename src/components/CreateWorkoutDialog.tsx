@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -17,7 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { v4 as uuidv4 } from "uuid";
 import { Slider } from "@/components/ui/slider";
 import { ExerciseSearch } from "@/components/ExerciseSearch";
-import { useMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ExerciseInputProps {
   onAddExercise: (exercise: Exercise) => void;
@@ -34,7 +33,7 @@ const ExerciseInput = ({ onAddExercise, defaultRestTime, templates }: ExerciseIn
   const [restTime, setRestTime] = useState(defaultRestTime);
   const [activeTab, setActiveTab] = useState("manual");
   const { toast } = useToast();
-  const { isMobile } = useMobile();
+  const isMobile = useIsMobile();
 
   const handleAddExercise = () => {
     if (!name) {
@@ -67,7 +66,6 @@ const ExerciseInput = ({ onAddExercise, defaultRestTime, templates }: ExerciseIn
 
     onAddExercise(exercise);
 
-    // Reset form
     setName("");
     setSets("3");
     setReps("10");
@@ -184,7 +182,7 @@ export const CreateWorkoutDialog = () => {
   const [defaultRestTime, setDefaultRestTime] = useState(60);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isMobile } = useMobile();
+  const isMobile = useIsMobile();
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm({
     defaultValues: {
@@ -238,7 +236,6 @@ export const CreateWorkoutDialog = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      // Create the workout
       const { data: workoutData, error: workoutError } = await supabase
         .from("workouts")
         .insert({
@@ -253,7 +250,6 @@ export const CreateWorkoutDialog = () => {
 
       if (workoutError) throw workoutError;
 
-      // Add all exercises
       const exercisesWithWorkoutId = exercises.map(exercise => ({
         ...exercise,
         workout_id: workoutData.id

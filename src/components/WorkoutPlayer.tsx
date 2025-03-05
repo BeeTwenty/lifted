@@ -4,7 +4,7 @@ import { useWorkoutPlayer } from "@/hooks/useWorkoutPlayer";
 import { ExerciseView } from "./workout-player/ExerciseView";
 import { RestTimer } from "./workout-player/RestTimer";
 import { WorkoutComplete } from "./workout-player/WorkoutComplete";
-import { useMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface WorkoutPlayerProps {
   workoutId: string | null;
@@ -14,7 +14,7 @@ interface WorkoutPlayerProps {
 export const WorkoutPlayer = ({ workoutId, onClose }: WorkoutPlayerProps) => {
   const playerState = useWorkoutPlayer(workoutId, onClose);
   const { loading, completed, isResting } = playerState;
-  const { isMobile } = useMobile();
+  const isMobile = useIsMobile();
 
   return (
     <Dialog open={!!workoutId} onOpenChange={(open) => !open && onClose()}>

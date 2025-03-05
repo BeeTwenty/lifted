@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -8,13 +7,13 @@ import { Trash2, Plus, Save, Search, Clock, Pencil, ListPlus } from "lucide-reac
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { ExerciseTemplate } from "@/types/workout";
+import { ExerciseTemplate } from "@/types/workflow";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ExerciseSearch } from "@/components/ExerciseSearch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { useMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface EditWorkoutDialogProps {
   workoutId: string;
@@ -47,7 +46,7 @@ export function EditWorkoutDialog({ workoutId, open, onOpenChange }: EditWorkout
   const [isSaving, setIsSaving] = useState(false);
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [templates, setTemplates] = useState<ExerciseTemplate[]>([]);
-  const { isMobile } = useMobile();
+  const isMobile = useIsMobile();
   
   useEffect(() => {
     if (open && workoutId) {
@@ -122,10 +121,8 @@ export function EditWorkoutDialog({ workoutId, open, onOpenChange }: EditWorkout
       
       if (workoutError) throw workoutError;
       
-      // Handle exercises - delete, update, insert as needed
       for (const exercise of workout.exercises) {
         if (exercise.id.startsWith('new-')) {
-          // New exercise to insert
           const { error } = await supabase
             .from("exercises")
             .insert({
@@ -140,7 +137,6 @@ export function EditWorkoutDialog({ workoutId, open, onOpenChange }: EditWorkout
           
           if (error) throw error;
         } else {
-          // Existing exercise to update
           const { error } = await supabase
             .from("exercises")
             .update({
@@ -246,7 +242,6 @@ export function EditWorkoutDialog({ workoutId, open, onOpenChange }: EditWorkout
       exercises: newExercises
     });
     
-    // If it's an existing exercise (not a new one), delete it from the database
     if (!exerciseToRemove.id.startsWith('new-')) {
       try {
         const { error } = await supabase
