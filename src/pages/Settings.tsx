@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Bell, Info, LogOut, Moon, Sun, User } from "lucide-react";
+import { Bell, ChevronLeft, Info, LogOut, Moon, Sun, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
@@ -150,7 +150,17 @@ export default function Settings() {
 
   return (
     <div className="container py-8">
-      <h1 className="text-3xl font-bold mb-6">Settings</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">Settings</h1>
+        <Button 
+          variant="outline" 
+          className="flex items-center gap-2"
+          onClick={() => navigate("/")}
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Back to Dashboard
+        </Button>
+      </div>
       
       <Tabs defaultValue="profile" className="space-y-6">
         <TabsList>

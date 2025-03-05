@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     splashScreen({
-      logoSrc: 'lifted-logo.svg',
+      logoSrc: '/vite.svg',
     }),
     mode === 'development' && componentTagger(),
   ].filter(Boolean),
