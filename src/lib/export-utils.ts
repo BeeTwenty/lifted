@@ -1,8 +1,9 @@
+
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
 import { format, isSameDay, isWithinInterval, differenceInDays, addDays, endOfWeek, startOfWeek } from "date-fns";
 
-// Type for CSV export options
+// Types for export functionality
 export type ExportOptions = {
   includeNotes?: boolean;
   dateRange?: {
@@ -11,7 +12,15 @@ export type ExportOptions = {
   };
 };
 
-// Function to export workout data to CSV
+export type WorkoutExportData = {
+  title: string;
+  completed_at: string;
+  duration: number;
+  notes?: string | null;
+  exercise_count?: number;
+};
+
+// CSV Export functions
 export const exportToCSV = (data: any[], filename: string) => {
   // Convert data to CSV format
   const headers = Object.keys(data[0]).join(",");
@@ -40,7 +49,7 @@ export const exportToCSV = (data: any[], filename: string) => {
   document.body.removeChild(link);
 };
 
-// Function to export workout data to PDF
+// PDF Export functions
 export const exportToPDF = (data: any[], filename: string, title: string) => {
   // @ts-ignore - jsPDF has types but autotable is an extension
   const doc = new jsPDF();
@@ -68,9 +77,9 @@ export const exportToPDF = (data: any[], filename: string, title: string) => {
   doc.save(`${filename}.pdf`);
 };
 
-// Function to prepare workout data for export
+// Data preparation functions
 export const prepareWorkoutDataForExport = async (
-  workouts: any[],
+  workouts: WorkoutExportData[],
   options: ExportOptions = {}
 ) => {
   return workouts.map((workout) => {
@@ -89,7 +98,7 @@ export const prepareWorkoutDataForExport = async (
   });
 };
 
-// Function to calculate the current streak from workout history
+// Streak calculation functions
 export const calculateCurrentStreak = (completedWorkouts: { completed_at: string }[]): number => {
   if (!completedWorkouts || completedWorkouts.length === 0) return 0;
   
@@ -128,7 +137,6 @@ export const calculateCurrentStreak = (completedWorkouts: { completed_at: string
   return streak;
 };
 
-// Function to calculate weekly streak (consecutive weeks with at least one workout)
 export const calculateWeeklyStreak = (completedWorkouts: { completed_at: string }[]): number => {
   if (!completedWorkouts || completedWorkouts.length === 0) return 0;
   
