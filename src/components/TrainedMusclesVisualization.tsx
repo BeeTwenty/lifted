@@ -42,16 +42,28 @@ export function TrainedMusclesVisualization() {
       const { data, error } = await supabase
         .rpc('get_trained_muscles_since', { start_date: startOfWeekISO });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching trained muscles:", error);
+        throw error;
+      }
+      
+      // Log the received data for debugging
+      console.log("Trained muscles data received:", data);
       
       return data?.map((item: { muscle_name: string }) => item.muscle_name) || [];
     },
   });
 
+  // Log the processed trainedMuscles for debugging
+  console.log("Processed trained muscles:", trainedMuscles);
+
   // Get all muscle areas that need to be highlighted
   const highlightedAreas = trainedMuscles?.flatMap(muscle => 
     muscleMapping[muscle] || []
   ) || [];
+
+  // Log the areas that should be highlighted
+  console.log("Areas to highlight:", highlightedAreas);
 
   // Create a set for faster lookups
   const highlightedSet = new Set(highlightedAreas);
