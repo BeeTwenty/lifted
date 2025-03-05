@@ -1,19 +1,20 @@
 import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dumbbell, Plus, Calendar, Award, History, LineChart } from "lucide-react";
 import { WorkoutCard } from "@/components/WorkoutCard";
 import { WorkoutStats } from "@/components/WorkoutStats";
-import { LogOut, UtensilsCrossed, Settings, Menu } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useNavigate, Link } from "react-router-dom";
-import { useToast } from "@/components/ui/use-toast";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { CreateWorkoutDialog } from "@/components/CreateWorkoutDialog";
 import { WorkoutPlayer } from "@/components/WorkoutPlayer";
-import { NutritionStat } from "@/components/NutritionStat";
-import { WeightTracker } from "@/components/WeightTracker";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { CreateWorkoutDialog } from "@/components/CreateWorkoutDialog";
 import { EditWorkoutDialog } from "@/components/EditWorkoutDialog";
+import { useQuery } from "@tanstack/react-query";
+import { ExerciseHistoryTracker } from "@/components/ExerciseHistoryTracker";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ const Index = () => {
   const [dailyCalories, setDailyCalories] = useState<number>(2000);
   const [consumedCalories, setConsumedCalories] = useState<number>(0);
   const [editWorkoutId, setEditWorkoutId] = useState<string | null>(null);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     fetchNutritionData();
@@ -163,97 +165,105 @@ const Index = () => {
   const displayName = profile?.fullName || profile?.username || profile?.email?.split('@')[0] || "there";
 
   return (
-    <div className="min-h-screen bg-gray-50/50 dark:bg-slate-900 dark:text-white">
-      <div className="container py-8 space-y-8">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-fade-in">
-          <div>
-            <h1 className="text-4xl font-bold dark:text-white">Welcome back, {displayName}</h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-2">Track your fitness journey</p>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:flex gap-2 items-center">
-            <CreateWorkoutDialog />
-            {/* 
-            <Link to="/nutrition">
-              <Button variant="outline" className="bg-primary/5 dark:bg-primary/10">
-                <UtensilsCrossed className="mr-2 h-4 w-4" />
-                Nutrition Tracker
-              </Button>
-            </Link>
-            */}
-            <Link to="/settings">
-              <Button variant="outline" className="bg-primary/5 dark:bg-primary/10">
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
-              </Button>
-            </Link>
-            <ThemeToggle />
-            <Button variant="outline" onClick={handleSignOut}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Sign Out
-            </Button>
-          </div>
+    <div className="container py-4 space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-fade-in">
+        <div>
+          <h1 className="text-4xl font-bold dark:text-white">Welcome back, {displayName}</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-2">Track your fitness journey</p>
         </div>
-
-        <section className="py-4">
-          <div className="grid grid-cols-1 gap-4 animate-fade-up">
-            <WorkoutStats />
-            {/* 
-            <div className="md:col-span-1">
-              <NutritionStat
-                dailyCalories={dailyCalories}
-                consumedCalories={consumedCalories}
-              />
-            </div>
-            */}
-          </div>
-        </section>
-
-        <section className="py-4">
-          <h2 className="text-2xl font-semibold mb-4 dark:text-white">Routines</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {isLoading ? (
-              Array(3).fill(0).map((_, i) => (
-                <div key={i} className="h-32 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg" />
-              ))
-            ) : routines?.length ? (
-              routines.map((routine) => (
-                <WorkoutCard
-                  key={routine.id}
-                  title={routine.title}
-                  duration={routine.duration ? `${routine.duration} min` : ""}
-                  exercises={routine.exercises}
-                  onClick={() => setActiveWorkoutId(routine.id)}
-                  onDelete={() => handleDeleteWorkout(routine.id)}
-                  onEdit={() => handleEditWorkout(routine.id)}
-                />
-              ))
-            ) : (
-              <div className="col-span-full text-center py-8 text-gray-500 dark:text-gray-400">
-                No routines yet. Start by creating your first workout routine!
-              </div>
-            )}
-          </div>
-        </section>
-
-        <section className="py-4">
-          <WeightTracker />
-        </section>
-
-        <WorkoutPlayer 
-          workoutId={activeWorkoutId} 
-          onClose={() => setActiveWorkoutId(null)} 
-        />
-
-        {editWorkoutId && (
-          <EditWorkoutDialog
-            workoutId={editWorkoutId}
-            open={!!editWorkoutId}
-            onOpenChange={(open) => {
-              if (!open) setEditWorkoutId(null);
-            }}
-          />
-        )}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:flex gap-2 items-center">
+          <CreateWorkoutDialog />
+          <Link to="/settings">
+            <Button variant="outline" className="bg-primary/5 dark:bg-primary/10">
+              <Settings className="mr-2 h-4 w-4" />
+              Settings
+            </Button>
+          </Link>
+          <ThemeToggle />
+          <Button variant="outline" onClick={handleSignOut}>
+            <LogOut className="mr-2 h-4 w-4" />
+            Sign Out
+          </Button>
+        </div>
       </div>
+
+      {user && (
+        <>
+          <Tabs defaultValue="workouts" className="w-full">
+            <TabsList className="grid grid-cols-3">
+              <TabsTrigger value="workouts">
+                <Dumbbell className="h-4 w-4 mr-2" /> Workouts
+              </TabsTrigger>
+              <TabsTrigger value="stats">
+                <Award className="h-4 w-4 mr-2" /> Stats
+              </TabsTrigger>
+              <TabsTrigger value="history">
+                <LineChart className="h-4 w-4 mr-2" /> Exercise History
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="workouts">
+              <div className="grid grid-cols-1 gap-4 animate-fade-up">
+                <WorkoutStats />
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="stats">
+              <WorkoutStats />
+            </TabsContent>
+            
+            <TabsContent value="history">
+              <ExerciseHistoryTracker />
+            </TabsContent>
+          </Tabs>
+
+          <section className="py-4">
+            <h2 className="text-2xl font-semibold mb-4 dark:text-white">Routines</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {isLoading ? (
+                Array(3).fill(0).map((_, i) => (
+                  <div key={i} className="h-32 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg" />
+                ))
+              ) : routines?.length ? (
+                routines.map((routine) => (
+                  <WorkoutCard
+                    key={routine.id}
+                    title={routine.title}
+                    duration={routine.duration ? `${routine.duration} min` : ""}
+                    exercises={routine.exercises}
+                    onClick={() => setActiveWorkoutId(routine.id)}
+                    onDelete={() => handleDeleteWorkout(routine.id)}
+                    onEdit={() => handleEditWorkout(routine.id)}
+                  />
+                ))
+              ) : (
+                <div className="col-span-full text-center py-8 text-gray-500 dark:text-gray-400">
+                  No routines yet. Start by creating your first workout routine!
+                </div>
+              )}
+            </div>
+          </section>
+
+          <section className="py-4">
+            <WeightTracker />
+          </section>
+
+          <WorkoutPlayer 
+            workoutId={activeWorkoutId} 
+            onClose={() => setActiveWorkoutId(null)} 
+          />
+
+          {editWorkoutId && (
+            <EditWorkoutDialog
+              workoutId={editWorkoutId}
+              open={!!editWorkoutId}
+              onOpenChange={(open) => {
+                if (!open) setEditWorkoutId(null);
+              }}
+            />
+          )}
+        </>
+      )}
     </div>
   );
 };
