@@ -20,19 +20,6 @@ interface ExerciseHistoryRecord {
   workout_title: string;
 }
 
-interface ExerciseData {
-  exercise_name: string;
-  weight: number;
-  reps: number;
-  sets: number;
-  workout: {
-    title: string;
-    completed_workouts: {
-      completed_at: string;
-    }[];
-  };
-}
-
 export function ExerciseHistoryTracker() {
   const [exercises, setExercises] = useState<string[]>([]);
   const [selectedExercise, setSelectedExercise] = useState<string>("");

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,11 +27,29 @@ const Index = () => {
   const [dailyCalories, setDailyCalories] = useState<number>(2000);
   const [consumedCalories, setConsumedCalories] = useState<number>(0);
   const [editWorkoutId, setEditWorkoutId] = useState<string | null>(null);
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Check if user is authenticated on component mount
+    const checkUser = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        setUser(user);
+        if (!user) {
+          // Redirect unauthenticated users to auth page
+          navigate("/auth");
+        }
+      } catch (error) {
+        console.error("Error checking user:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkUser();
     fetchNutritionData();
-  }, []);
+  }, [navigate]);
 
   const fetchNutritionData = async () => {
     try {
@@ -91,9 +110,10 @@ const Index = () => {
         email: user.email
       };
     },
+    enabled: !!user, // Only run query if user is logged in
   });
 
-  const { data: routines, isLoading } = useQuery({
+  const { data: routines, isLoading: isRoutinesLoading } = useQuery({
     queryKey: ["routines"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -119,6 +139,7 @@ const Index = () => {
         duration: workout.duration || 0,
       }));
     },
+    enabled: !!user, // Only run query if user is logged in
   });
 
   const handleSignOut = async () => {
@@ -166,6 +187,18 @@ const Index = () => {
 
   const displayName = profile?.fullName || profile?.username || profile?.email?.split('@')[0] || "there";
 
+  // Show loading state while checking authentication
+  if (isLoading) {
+    return (
+      <div className="container py-4 flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto"></div>
+          <p className="mt-4 text-gray-500 dark:text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container py-4 space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-fade-in">
@@ -189,82 +222,78 @@ const Index = () => {
         </div>
       </div>
 
-      {user && (
-        <>
-          <Tabs defaultValue="workouts" className="w-full">
-            <TabsList className="grid grid-cols-3">
-              <TabsTrigger value="workouts">
-                <Dumbbell className="h-4 w-4 mr-2" /> Workouts
-              </TabsTrigger>
-              <TabsTrigger value="stats">
-                <Award className="h-4 w-4 mr-2" /> Stats
-              </TabsTrigger>
-              <TabsTrigger value="history">
-                <LineChart className="h-4 w-4 mr-2" /> Exercise History
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="workouts">
-              <div className="grid grid-cols-1 gap-4 animate-fade-up">
-                <WorkoutStats />
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="stats">
-              <WorkoutStats />
-            </TabsContent>
-            
-            <TabsContent value="history">
-              <ExerciseHistoryTracker />
-            </TabsContent>
-          </Tabs>
+      <Tabs defaultValue="workouts" className="w-full">
+        <TabsList className="grid grid-cols-3">
+          <TabsTrigger value="workouts">
+            <Dumbbell className="h-4 w-4 mr-2" /> Workouts
+          </TabsTrigger>
+          <TabsTrigger value="stats">
+            <Award className="h-4 w-4 mr-2" /> Stats
+          </TabsTrigger>
+          <TabsTrigger value="history">
+            <LineChart className="h-4 w-4 mr-2" /> Exercise History
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="workouts">
+          <div className="grid grid-cols-1 gap-4 animate-fade-up">
+            <WorkoutStats />
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="stats">
+          <WorkoutStats />
+        </TabsContent>
+        
+        <TabsContent value="history">
+          <ExerciseHistoryTracker />
+        </TabsContent>
+      </Tabs>
 
-          <section className="py-4">
-            <h2 className="text-2xl font-semibold mb-4 dark:text-white">Routines</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {isLoading ? (
-                Array(3).fill(0).map((_, i) => (
-                  <div key={i} className="h-32 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg" />
-                ))
-              ) : routines?.length ? (
-                routines.map((routine) => (
-                  <WorkoutCard
-                    key={routine.id}
-                    title={routine.title}
-                    duration={routine.duration ? `${routine.duration} min` : ""}
-                    exercises={routine.exercises}
-                    onClick={() => setActiveWorkoutId(routine.id)}
-                    onDelete={() => handleDeleteWorkout(routine.id)}
-                    onEdit={() => handleEditWorkout(routine.id)}
-                  />
-                ))
-              ) : (
-                <div className="col-span-full text-center py-8 text-gray-500 dark:text-gray-400">
-                  No routines yet. Start by creating your first workout routine!
-                </div>
-              )}
+      <section className="py-4">
+        <h2 className="text-2xl font-semibold mb-4 dark:text-white">Routines</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {isRoutinesLoading ? (
+            Array(3).fill(0).map((_, i) => (
+              <div key={i} className="h-32 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg" />
+            ))
+          ) : routines?.length ? (
+            routines.map((routine) => (
+              <WorkoutCard
+                key={routine.id}
+                title={routine.title}
+                duration={routine.duration ? `${routine.duration} min` : ""}
+                exercises={routine.exercises}
+                onClick={() => setActiveWorkoutId(routine.id)}
+                onDelete={() => handleDeleteWorkout(routine.id)}
+                onEdit={() => handleEditWorkout(routine.id)}
+              />
+            ))
+          ) : (
+            <div className="col-span-full text-center py-8 text-gray-500 dark:text-gray-400">
+              No routines yet. Start by creating your first workout routine!
             </div>
-          </section>
-
-          <section className="py-4">
-            <WeightTracker />
-          </section>
-
-          <WorkoutPlayer 
-            workoutId={activeWorkoutId} 
-            onClose={() => setActiveWorkoutId(null)} 
-          />
-
-          {editWorkoutId && (
-            <EditWorkoutDialog
-              workoutId={editWorkoutId}
-              open={!!editWorkoutId}
-              onOpenChange={(open) => {
-                if (!open) setEditWorkoutId(null);
-              }}
-            />
           )}
-        </>
+        </div>
+      </section>
+
+      <section className="py-4">
+        <WeightTracker />
+      </section>
+
+      <WorkoutPlayer 
+        workoutId={activeWorkoutId} 
+        onClose={() => setActiveWorkoutId(null)} 
+      />
+
+      {editWorkoutId && (
+        <EditWorkoutDialog
+          workoutId={editWorkoutId}
+          open={!!editWorkoutId}
+          onOpenChange={(open) => {
+            if (!open) setEditWorkoutId(null);
+          }}
+        />
       )}
     </div>
   );
