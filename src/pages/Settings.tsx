@@ -1,19 +1,22 @@
+
 import { AdminAccessButton } from "@/components/AdminAccessButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Bell, LogOut, Moon, Sun, User } from "lucide-react";
+import { Bell, Info, LogOut, Moon, Sun, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
+import { useTheme } from "@/components/ThemeProvider";
 
 const profileFormSchema = z.object({
   username: z
@@ -39,6 +42,7 @@ export default function Settings() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [userData, setUserData] = useState<any>(null);
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -214,7 +218,11 @@ export default function Settings() {
                       <FormItem>
                         <FormLabel>Bio</FormLabel>
                         <FormControl>
-                          <Input placeholder="Tell us about yourself" {...field} />
+                          <Textarea 
+                            placeholder="Tell us about yourself" 
+                            className="resize-none"
+                            {...field} 
+                          />
                         </FormControl>
                         <FormDescription>
                           Brief description for your profile. Max 160 characters.
@@ -271,7 +279,11 @@ export default function Settings() {
                   </div>
                   <div className="flex items-center space-x-2">
                     <Sun className="h-4 w-4" />
-                    <Switch id="dark-mode" />
+                    <Switch 
+                      id="dark-mode" 
+                      checked={theme === "dark"}
+                      onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+                    />
                     <Moon className="h-4 w-4" />
                   </div>
                 </div>
@@ -279,7 +291,10 @@ export default function Settings() {
               
               <div className="space-y-2">
                 <label className="font-medium">Theme</label>
-                <Select defaultValue="system">
+                <Select 
+                  value={theme} 
+                  onValueChange={(value) => setTheme(value as "light" | "dark" | "system")}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a theme" />
                   </SelectTrigger>
@@ -306,7 +321,17 @@ export default function Settings() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-4">
+              <div className="border rounded-md p-4 bg-muted/20">
+                <div className="flex gap-2 items-center text-muted-foreground mb-2">
+                  <Info className="h-4 w-4" />
+                  <p className="text-sm font-medium">Notifications Coming Soon</p>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  The notification system is currently under development. Check back soon for updates!
+                </p>
+              </div>
+            
+              <div className="space-y-4 opacity-60 pointer-events-none">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <label className="font-medium">Workout reminders</label>
@@ -314,7 +339,7 @@ export default function Settings() {
                       Receive reminders for scheduled workouts
                     </p>
                   </div>
-                  <Switch id="workout-notifications" defaultChecked />
+                  <Switch id="workout-notifications" defaultChecked disabled />
                 </div>
                 
                 <div className="flex items-center justify-between">
@@ -324,7 +349,7 @@ export default function Settings() {
                       Get notified about your fitness progress
                     </p>
                   </div>
-                  <Switch id="progress-notifications" defaultChecked />
+                  <Switch id="progress-notifications" defaultChecked disabled />
                 </div>
                 
                 <div className="flex items-center justify-between">
@@ -334,7 +359,7 @@ export default function Settings() {
                       Learn about new app features and updates
                     </p>
                   </div>
-                  <Switch id="feature-notifications" />
+                  <Switch id="feature-notifications" disabled />
                 </div>
               </div>
             </CardContent>
