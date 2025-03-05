@@ -4,6 +4,7 @@ import { Activity, Timer } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
+import { startOfWeek } from "date-fns";
 
 export function WorkoutStats() {
   // Fetch user profile and workout stats
@@ -23,27 +24,24 @@ export function WorkoutStats() {
       if (profileError) throw profileError;
 
       const now = new Date();
-      const startOfWeek = new Date(now);
-      startOfWeek.setDate(now.getDate() - now.getDay());
-      startOfWeek.setHours(0, 0, 0, 0);
-      const startOfWeekISO = startOfWeek.toISOString();
+      // Start week on Monday (1), not Sunday (0)
+      const mondayOfThisWeek = startOfWeek(now, { weekStartsOn: 1 });
+      const startOfWeekISO = mondayOfThisWeek.toISOString();
 
-      const { count: totalWorkouts } = await supabase
-        .from("workouts")
-        .select("*", { count: "exact" })
-        .eq("user_id", user.id)
-        .gte("created_at", startOfWeekISO);
-
-      const { data: workouts } = await supabase
-        .from("workouts")
+      // Get completed workouts this week (tracking completed workouts, not just created ones)
+      const { data: completedWorkouts, error: completedError } = await supabase
+        .from("completed_workouts")
         .select("id, duration")
         .eq("user_id", user.id)
-        .gte("created_at", startOfWeekISO);
+        .gte("completed_at", startOfWeekISO);
 
-      const totalHours = workouts?.reduce((acc, curr) => acc + (curr.duration / 60), 0) || 0;
+      if (completedError) throw completedError;
+
+      const totalWorkouts = completedWorkouts?.length || 0;
+      const totalHours = completedWorkouts?.reduce((acc, curr) => acc + (curr.duration / 60), 0) || 0;
 
       return {
-        totalWorkouts: totalWorkouts || 0,
+        totalWorkouts,
         totalHours: Math.round(totalHours),
         workoutGoal: profile?.workout_goal || 5,
         hourGoal: profile?.hour_goal || 10,

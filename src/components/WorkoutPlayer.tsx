@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import Image from "@/components/ui/image";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface Exercise {
   id: string;
@@ -27,6 +27,7 @@ interface Workout {
   title: string;
   exercises: Exercise[];
   default_rest_time: number;
+  duration: number;
 }
 
 interface WorkoutPlayerProps {
@@ -44,11 +45,15 @@ export const WorkoutPlayer = ({ workoutId, onClose }: WorkoutPlayerProps) => {
   const [restTimeRemaining, setRestTimeRemaining] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [showMedia, setShowMedia] = useState(false);
+  const [startTime, setStartTime] = useState<Date | null>(null);
+  const [actualDuration, setActualDuration] = useState<number>(0);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (workoutId) {
       fetchWorkout(workoutId);
+      setStartTime(new Date());
     }
   }, [workoutId]);
 
@@ -72,7 +77,7 @@ export const WorkoutPlayer = ({ workoutId, onClose }: WorkoutPlayerProps) => {
     try {
       const { data: workoutData, error: workoutError } = await supabase
         .from("workouts")
-        .select("id, title, default_rest_time")
+        .select("id, title, default_rest_time, duration")
         .eq("id", id)
         .single();
 
@@ -94,7 +99,6 @@ export const WorkoutPlayer = ({ workoutId, onClose }: WorkoutPlayerProps) => {
 
       if (exercisesError) throw exercisesError;
 
-      // Fetch media_url for all exercises
       const exercisesWithMedia = await Promise.all(
         exercisesData.map(async (exercise) => {
           const { data: templateData, error: templateError } = await supabase
@@ -116,7 +120,8 @@ export const WorkoutPlayer = ({ workoutId, onClose }: WorkoutPlayerProps) => {
         id: workoutData.id,
         title: workoutData.title,
         exercises: exercisesWithMedia,
-        default_rest_time: workoutData.default_rest_time || 60
+        default_rest_time: workoutData.default_rest_time || 60,
+        duration: workoutData.duration
       });
 
       setCurrentExerciseIndex(0);
@@ -137,11 +142,42 @@ export const WorkoutPlayer = ({ workoutId, onClose }: WorkoutPlayerProps) => {
   };
 
   const handleComplete = async () => {
-    // Additional logic if needed for tracking workout completion
-    toast({
-      title: "Workout completed!",
-      description: "Great job completing your workout.",
-    });
+    if (!workout || !startTime) return;
+    
+    const endTime = new Date();
+    const durationMs = endTime.getTime() - startTime.getTime();
+    const durationMinutes = Math.round(durationMs / (1000 * 60));
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+      
+      const { error } = await supabase
+        .from("completed_workouts")
+        .insert({
+          user_id: user.id,
+          workout_id: workout.id,
+          completed_at: new Date().toISOString(),
+          duration: durationMinutes
+        });
+        
+      if (error) throw error;
+      
+      queryClient.invalidateQueries({ queryKey: ["workoutStats"] });
+      
+      toast({
+        title: "Workout completed!",
+        description: `Great job completing your workout in ${durationMinutes} minutes.`,
+      });
+    } catch (error: any) {
+      console.error("Error recording workout completion:", error);
+      toast({
+        variant: "destructive",
+        title: "Error recording completion",
+        description: error.message,
+      });
+    }
+    
     onClose();
   };
 
@@ -157,15 +193,12 @@ export const WorkoutPlayer = ({ workoutId, onClose }: WorkoutPlayerProps) => {
     if (!workout || !currentExercise) return;
     
     if (currentSetIndex < currentExercise.sets - 1) {
-      // Move to next set of current exercise
       setCurrentSetIndex(currentSetIndex + 1);
     } else {
-      // Move to next exercise
       if (currentExerciseIndex < workout.exercises.length - 1) {
         setCurrentExerciseIndex(currentExerciseIndex + 1);
         setCurrentSetIndex(0);
       } else {
-        // Workout completed
         setCompleted(true);
       }
     }
@@ -196,6 +229,7 @@ export const WorkoutPlayer = ({ workoutId, onClose }: WorkoutPlayerProps) => {
     setIsResting(false);
     setRestTimeRemaining(0);
     setIsPaused(false);
+    setStartTime(new Date());
   };
 
   const formatTime = (seconds: number) => {
@@ -203,7 +237,6 @@ export const WorkoutPlayer = ({ workoutId, onClose }: WorkoutPlayerProps) => {
     const secs = seconds % 60;
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
-  
 
   const renderMediaContent = () => {
     const mediaUrl = currentExercise?.media_url;
@@ -220,7 +253,6 @@ export const WorkoutPlayer = ({ workoutId, onClose }: WorkoutPlayerProps) => {
       );
     }
   
-    // Handle YouTube videos
     if (mediaUrl.includes("youtube.com") || mediaUrl.includes("youtu.be")) {
       let embedUrl = mediaUrl;
       if (mediaUrl.includes("watch?v=")) {
@@ -244,7 +276,6 @@ export const WorkoutPlayer = ({ workoutId, onClose }: WorkoutPlayerProps) => {
       );
     }
   
-    // Handle direct MP4/WebM/Ogg videos
     if (mediaUrl.match(/\.(mp4|webm|ogg|mov)$/i)) {
       return (
         <AspectRatio ratio={16 / 9} className="bg-muted">
@@ -257,7 +288,6 @@ export const WorkoutPlayer = ({ workoutId, onClose }: WorkoutPlayerProps) => {
       );
     }
   
-    // Handle Images
     if (mediaUrl.match(/\.(jpeg|jpg|gif|png)$/i)) {
       return (
         <AspectRatio ratio={16 / 9} className="bg-muted">
@@ -270,7 +300,6 @@ export const WorkoutPlayer = ({ workoutId, onClose }: WorkoutPlayerProps) => {
       );
     }
   
-    // If no valid media type, show placeholder
     return (
       <div className="py-10 text-center">
         <img 
@@ -281,7 +310,6 @@ export const WorkoutPlayer = ({ workoutId, onClose }: WorkoutPlayerProps) => {
       </div>
     );
   };
-  
 
   return (
     <>
@@ -435,4 +463,3 @@ export const WorkoutPlayer = ({ workoutId, onClose }: WorkoutPlayerProps) => {
     </>
   );
 };
-
