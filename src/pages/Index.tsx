@@ -7,14 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dumbbell, Plus, Calendar, Award, History, LineChart } from "lucide-react";
+import { Dumbbell, Plus, Calendar, Award, History, LineChart, Settings, LogOut } from "lucide-react";
 import { WorkoutCard } from "@/components/WorkoutCard";
 import { WorkoutStats } from "@/components/WorkoutStats";
 import { WorkoutPlayer } from "@/components/WorkoutPlayer";
 import { CreateWorkoutDialog } from "@/components/CreateWorkoutDialog";
 import { EditWorkoutDialog } from "@/components/EditWorkoutDialog";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExerciseHistoryTracker } from "@/components/ExerciseHistoryTracker";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { WeightTracker } from "@/components/WeightTracker";
 
 const Index = () => {
   const navigate = useNavigate();

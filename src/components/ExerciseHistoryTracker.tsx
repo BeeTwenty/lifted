@@ -20,6 +20,19 @@ interface ExerciseHistoryRecord {
   workout_title: string;
 }
 
+interface ExerciseData {
+  exercise_name: string;
+  weight: number;
+  reps: number;
+  sets: number;
+  workout: {
+    title: string;
+    completed_workouts: {
+      completed_at: string;
+    }[];
+  };
+}
+
 export function ExerciseHistoryTracker() {
   const [exercises, setExercises] = useState<string[]>([]);
   const [selectedExercise, setSelectedExercise] = useState<string>("");
@@ -85,14 +98,15 @@ export function ExerciseHistoryTracker() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      const { data, error } = await supabase
+      // Join exercises with workouts and completed_workouts in separate queries
+      const { data: exercisesData, error: exercisesError } = await supabase
         .from("exercises")
         .select(`
-          name as exercise_name,
+          name,
           weight,
           reps,
           sets,
-          workouts(title, completed_workouts(completed_at))
+          workout_id
         `)
         .eq("name", exerciseName)
         .filter("workout_id", "in", (
@@ -100,23 +114,52 @@ export function ExerciseHistoryTracker() {
             .from("workouts")
             .select("id")
             .eq("user_id", user.id)
-        ))
-        .order("workouts.completed_workouts.completed_at", { ascending: false })
-        .limit(20);
+        ));
 
-      if (error) throw error;
+      if (exercisesError) throw exercisesError;
+      
+      if (!exercisesData || exercisesData.length === 0) {
+        setHistory([]);
+        setIsHistoryLoading(false);
+        return;
+      }
 
-      // Format the data for display
-      const formattedHistory = data
-        .filter(record => record.workouts && record.workouts.completed_workouts && record.workouts.completed_workouts.length > 0)
-        .map(record => ({
-          exercise_name: record.exercise_name,
-          weight: record.weight || 0,
-          reps: record.reps,
-          sets: record.sets,
-          date: format(new Date(record.workouts.completed_workouts[0].completed_at), 'MMM dd, yyyy'),
-          workout_title: record.workouts.title
-        }));
+      // Get all workout_ids from the exercises
+      const workoutIds = exercisesData.map(ex => ex.workout_id);
+
+      // Get workout details and completed dates
+      const { data: workoutsData, error: workoutsError } = await supabase
+        .from("workouts")
+        .select(`
+          id,
+          title,
+          completed_workouts(completed_at)
+        `)
+        .in("id", workoutIds)
+        .order("completed_workouts.completed_at", { ascending: false });
+
+      if (workoutsError) throw workoutsError;
+
+      // Map the data together
+      const formattedHistory: ExerciseHistoryRecord[] = [];
+      
+      for (const workout of workoutsData) {
+        if (!workout.completed_workouts || workout.completed_workouts.length === 0) {
+          continue;
+        }
+        
+        const exercise = exercisesData.find(e => e.workout_id === workout.id);
+        if (!exercise) continue;
+        
+        formattedHistory.push({
+          exercise_name: exercise.name,
+          weight: exercise.weight || 0,
+          reps: exercise.reps,
+          sets: exercise.sets,
+          date: format(new Date(workout.completed_workouts[0].completed_at), 'MMM dd, yyyy'),
+          workout_title: workout.title
+        });
+      }
 
       setHistory(formattedHistory);
     } catch (error: any) {
