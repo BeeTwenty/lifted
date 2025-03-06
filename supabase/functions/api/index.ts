@@ -15,7 +15,21 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const apiKey = req.headers.get('x-api-key');
+    
+    // Get API key from header or bearer token
+    let apiKey = req.headers.get('x-api-key');
+    
+    // If no x-api-key, try to get from Authorization header
+    if (!apiKey) {
+      const authHeader = req.headers.get('Authorization');
+      console.log('Authorization header:', authHeader);
+      
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        // Try to use the bearer token as the API key
+        apiKey = authHeader.substring(7);
+        console.log('Using bearer token as API key');
+      }
+    }
     
     if (!apiKey) {
       throw new Error('API key is required');
@@ -56,6 +70,11 @@ serve(async (req) => {
         break;
       case 'exercises':
         result = await handleExercises(req, supabaseAdmin, user_id);
+        break;
+      case 'api':
+      case '':
+        // Handle the root endpoint or /api endpoint
+        result = { message: "API is working correctly", endpoints: ["workouts", "exercises"] };
         break;
       default:
         throw new Error('Invalid endpoint');
