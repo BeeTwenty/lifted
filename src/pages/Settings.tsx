@@ -16,6 +16,7 @@ import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useTheme } from "@/components/ThemeProvider";
+import { ApiKeyManager } from "@/components/ApiKeyManager";
 
 const profileFormSchema = z.object({
   username: z
