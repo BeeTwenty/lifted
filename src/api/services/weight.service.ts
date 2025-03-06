@@ -16,9 +16,15 @@ export const weightService = {
   },
 
   async addWeightRecord(weight: number) {
+    const { data: { user } } = await api.supabase.auth.getUser();
+    if (!user) throw new Error("User not authenticated");
+
     const { data, error } = await api.supabase
       .from("weight_records")
-      .insert({ weight })
+      .insert({ 
+        weight,
+        user_id: user.id 
+      })
       .select()
       .single();
 
@@ -26,3 +32,4 @@ export const weightService = {
     return data;
   },
 };
+
