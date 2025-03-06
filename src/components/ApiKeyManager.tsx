@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -55,10 +54,13 @@ export function ApiKeyManager() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["apiKeys"] });
-      // Save the API key to show in dialog
       setNewApiKey(data.api_key);
       setShowKeyDialog(true);
       setKeyName("");
+      toast({
+        title: "API Key Created",
+        description: "Make sure to copy your API key now. You won't be able to see it again.",
+      });
     },
     onError: (error: Error) => {
       toast({
@@ -107,11 +109,22 @@ export function ApiKeyManager() {
     createKeyMutation.mutate(keyName);
   };
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(newApiKey).then(() => {
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(newApiKey);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    });
+      toast({
+        title: "Copied",
+        description: "API key copied to clipboard",
+      });
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Failed to copy",
+        description: "Please try copying manually",
+      });
+    }
   };
 
   return (
@@ -187,25 +200,21 @@ export function ApiKeyManager() {
               This is the only time you'll see this API key. Make sure to copy it now.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex items-center space-x-2 mt-4">
-            <div className="bg-muted p-3 rounded-md flex-1 overflow-x-auto font-mono text-sm">
+          <div className="flex items-center space-x-2">
+            <pre className="flex-1 p-3 bg-muted rounded-md font-mono text-sm break-all">
               {newApiKey}
-            </div>
-            <Button 
-              variant="outline" 
+            </pre>
+            <Button
+              variant="outline"
               size="icon"
               onClick={copyToClipboard}
               className="flex-shrink-0"
-              aria-label="Copy API key to clipboard"
             >
               {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
             </Button>
           </div>
-          <DialogFooter className="mt-4">
-            <Button 
-              onClick={() => setShowKeyDialog(false)}
-              className="w-full sm:w-auto"
-            >
+          <DialogFooter className="sm:justify-start">
+            <Button variant="secondary" onClick={() => setShowKeyDialog(false)}>
               Close
             </Button>
           </DialogFooter>
