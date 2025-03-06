@@ -23,22 +23,25 @@ serve(async (req) => {
 
     console.log('Request received with API key:', apiKey);
 
-    // Initialize Supabase client
-    const supabase = createClient(
+    // Initialize Supabase client with service role key to bypass RLS
+    const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
     // Verify API key and get user_id
-    const { data: { user_id }, error: verifyError } = await supabase
+    const { data: apiKeyData, error: verifyError } = await supabaseAdmin
       .rpc('verify_api_key', { api_key_param: apiKey })
       .single();
 
-    console.log('Verify API key result:', { user_id, error: verifyError });
+    console.log('Verify API key result:', { apiKeyData, error: verifyError });
 
-    if (verifyError || !user_id) {
+    if (verifyError || !apiKeyData?.user_id) {
       throw new Error('Invalid API key');
     }
+
+    const user_id = apiKeyData.user_id;
+    console.log('Verified user_id:', user_id);
 
     // Handle different endpoints
     const pathParts = url.pathname.split('/');
@@ -49,10 +52,10 @@ serve(async (req) => {
     let result;
     switch (endpoint) {
       case 'workouts':
-        result = await handleWorkouts(req, supabase, user_id);
+        result = await handleWorkouts(req, supabaseAdmin, user_id);
         break;
       case 'exercises':
-        result = await handleExercises(req, supabase, user_id);
+        result = await handleExercises(req, supabaseAdmin, user_id);
         break;
       default:
         throw new Error('Invalid endpoint');
