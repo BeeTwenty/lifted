@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,28 +15,23 @@ export function AdDisplay({ onClose, fullWidth = false }: AdDisplayProps) {
   const adContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Function to load Google AdSense ads
     const loadAd = () => {
       try {
         if (adContainerRef.current && typeof window !== 'undefined') {
-          // Clear any existing content
           adContainerRef.current.innerHTML = '';
           
-          // Create the ins element for AdSense
           const adInsElement = document.createElement('ins');
           adInsElement.className = 'adsbygoogle';
           adInsElement.style.display = 'block';
           adInsElement.setAttribute('data-ad-client', 'ca-pub-1703915401564574');
-          adInsElement.setAttribute('data-ad-slot', 'YOUR-AD-SLOT'); // Replace with your actual ad slot
+          adInsElement.setAttribute('data-ad-slot', '1234567890');
           adInsElement.setAttribute('data-ad-format', 'auto');
           adInsElement.setAttribute('data-full-width-responsive', 'true');
           
-          // Append the ins element to our container
           adContainerRef.current.appendChild(adInsElement);
           
-          // Execute the ad code
           try {
-            (window.adsbygoogle = window.adsbygoogle || []).push({});
+            ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
             console.log('AdSense ad pushed to queue');
             setLoading(false);
           } catch (adError) {
@@ -51,24 +45,18 @@ export function AdDisplay({ onClose, fullWidth = false }: AdDisplayProps) {
       }
     };
 
-    // Show fallback ads if AdSense fails
     const showFallbackAd = () => {
       console.log('Showing fallback ad');
       setFallbackAdShown(true);
       setLoading(false);
-      
-      // In a production app, you might want to report this error
-      // to your analytics or logging system
     };
 
-    // Check if AdSense is blocked or not loaded
     const adBlockDetectionTimer = setTimeout(() => {
       if (loading && !fallbackAdShown) {
         showFallbackAd();
       }
     }, 2000);
 
-    // Load the ad
     loadAd();
 
     return () => {
@@ -76,7 +64,6 @@ export function AdDisplay({ onClose, fullWidth = false }: AdDisplayProps) {
     };
   }, [loading, fallbackAdShown]);
 
-  // Fallback ad content
   const fallbackAds = [
     "Try our premium plan for more workout features!",
     "Check out new protein supplements at HealthStore",
