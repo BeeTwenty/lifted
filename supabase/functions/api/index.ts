@@ -4,7 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-api-key',
 };
 
 serve(async (req) => {
@@ -21,6 +21,8 @@ serve(async (req) => {
       throw new Error('API key is required');
     }
 
+    console.log('Request received with API key:', apiKey);
+
     // Initialize Supabase client
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -32,12 +34,17 @@ serve(async (req) => {
       .rpc('verify_api_key', { api_key_param: apiKey })
       .single();
 
+    console.log('Verify API key result:', { user_id, error: verifyError });
+
     if (verifyError || !user_id) {
       throw new Error('Invalid API key');
     }
 
     // Handle different endpoints
-    const endpoint = url.pathname.split('/').pop();
+    const pathParts = url.pathname.split('/');
+    const endpoint = pathParts[pathParts.length - 1];
+
+    console.log('Endpoint requested:', endpoint);
 
     let result;
     switch (endpoint) {
