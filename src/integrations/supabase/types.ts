@@ -27,6 +27,39 @@ export type Database = {
         }
         Relationships: []
       }
+      api_keys: {
+        Row: {
+          api_key: string
+          created_at: string
+          id: string
+          key_name: string
+          last_used: string | null
+          permissions: string[]
+          revoked: boolean
+          user_id: string
+        }
+        Insert: {
+          api_key: string
+          created_at?: string
+          id?: string
+          key_name: string
+          last_used?: string | null
+          permissions?: string[]
+          revoked?: boolean
+          user_id: string
+        }
+        Update: {
+          api_key?: string
+          created_at?: string
+          id?: string
+          key_name?: string
+          last_used?: string | null
+          permissions?: string[]
+          revoked?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
       completed_workouts: {
         Row: {
           completed_at: string
@@ -408,6 +441,23 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_user_api_key: {
+        Args: {
+          name_param: string
+          permissions_param?: string[]
+        }
+        Returns: {
+          id: string
+          key_name: string
+          api_key: string
+          created_at: string
+          permissions: string[]
+        }[]
+      }
+      generate_api_key: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_completed_workouts_since: {
         Args: {
           start_date: string
@@ -433,6 +483,12 @@ export type Database = {
           duration_param: number
         }
         Returns: undefined
+      }
+      verify_api_key: {
+        Args: {
+          api_key_param: string
+        }
+        Returns: string
       }
     }
     Enums: {

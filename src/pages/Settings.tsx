@@ -1,4 +1,3 @@
-
 import { AdminAccessButton } from "@/components/AdminAccessButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,7 +36,7 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
-export default function Settings() {
+const Settings = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -162,220 +161,227 @@ export default function Settings() {
         </Button>
       </div>
       
-      <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="profile" className="flex items-center gap-2">
-            <User className="h-4 w-4" />
-            Profile
-          </TabsTrigger>
-          <TabsTrigger value="appearance" className="flex items-center gap-2">
-            <Sun className="h-4 w-4" />
-            Appearance
-          </TabsTrigger>
-          <TabsTrigger value="notifications" className="flex items-center gap-2">
-            <Bell className="h-4 w-4" />
-            Notifications
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="profile" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Profile</CardTitle>
-              <CardDescription>
-                Manage your public profile information.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="username"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Username</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Your username" {...field} />
-                        </FormControl>
-                        <FormDescription>
-                          This is your public display name.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Your email" {...field} disabled />
-                        </FormControl>
-                        <FormDescription>
-                          Your email address is managed through your authentication provider.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="bio"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Bio</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="Tell us about yourself" 
-                            className="resize-none"
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Brief description for your profile. Max 160 characters.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" disabled={loading}>
-                    Save changes
-                  </Button>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
+      <div className="grid gap-6">
+        <Tabs defaultValue="profile" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="profile" className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Profile
+            </TabsTrigger>
+            <TabsTrigger value="appearance" className="flex items-center gap-2">
+              <Sun className="h-4 w-4" />
+              Appearance
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="flex items-center gap-2">
+              <Bell className="h-4 w-4" />
+              Notifications
+            </TabsTrigger>
+          </TabsList>
           
-          <Card>
-            <CardHeader>
-              <CardTitle>Account</CardTitle>
-              <CardDescription>
-                Manage your account settings.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Button 
-                variant="destructive" 
-                className="w-full sm:w-auto"
-                onClick={handleSignOut}
-                disabled={loading}
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                Sign out
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="appearance" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Appearance</CardTitle>
-              <CardDescription>
-                Customize how the app looks and feels.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-col space-y-1">
-                    <span className="font-medium">Dark mode</span>
-                    <span className="text-sm text-gray-500">
-                      Switch between light and dark mode
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Sun className="h-4 w-4" />
-                    <Switch 
-                      id="dark-mode" 
-                      checked={theme === "dark"}
-                      onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+          <TabsContent value="profile" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Profile</CardTitle>
+                <CardDescription>
+                  Manage your public profile information.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="username"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Username</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Your username" {...field} />
+                          </FormControl>
+                          <FormDescription>
+                            This is your public display name.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                    <Moon className="h-4 w-4" />
-                  </div>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <label className="font-medium">Theme</label>
-                <Select 
-                  value={theme} 
-                  onValueChange={(value) => setTheme(value as "light" | "dark" | "system")}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a theme" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="system">System</SelectItem>
-                    <SelectItem value="light">Light</SelectItem>
-                    <SelectItem value="dark">Dark</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-sm text-gray-500">
-                  Select your preferred theme or use system settings.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="notifications" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Notifications</CardTitle>
-              <CardDescription>
-                Configure how you receive notifications.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="border rounded-md p-4 bg-muted/20">
-                <div className="flex gap-2 items-center text-muted-foreground mb-2">
-                  <Info className="h-4 w-4" />
-                  <p className="text-sm font-medium">Notifications Coming Soon</p>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  The notification system is currently under development. Check back soon for updates!
-                </p>
-              </div>
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Your email" {...field} disabled />
+                          </FormControl>
+                          <FormDescription>
+                            Your email address is managed through your authentication provider.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="bio"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Bio</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Tell us about yourself" 
+                              className="resize-none"
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Brief description for your profile. Max 160 characters.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button type="submit" disabled={loading}>
+                      Save changes
+                    </Button>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
             
-              <div className="space-y-4 opacity-60 pointer-events-none">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <label className="font-medium">Workout reminders</label>
-                    <p className="text-sm text-gray-500">
-                      Receive reminders for scheduled workouts
-                    </p>
+            <Card>
+              <CardHeader>
+                <CardTitle>Account</CardTitle>
+                <CardDescription>
+                  Manage your account settings.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button 
+                  variant="destructive" 
+                  className="w-full sm:w-auto"
+                  onClick={handleSignOut}
+                  disabled={loading}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign out
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="appearance" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Appearance</CardTitle>
+                <CardDescription>
+                  Customize how the app looks and feels.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col space-y-1">
+                      <span className="font-medium">Dark mode</span>
+                      <span className="text-sm text-gray-500">
+                        Switch between light and dark mode
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Sun className="h-4 w-4" />
+                      <Switch 
+                        id="dark-mode" 
+                        checked={theme === "dark"}
+                        onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+                      />
+                      <Moon className="h-4 w-4" />
+                    </div>
                   </div>
-                  <Switch id="workout-notifications" defaultChecked disabled />
                 </div>
                 
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <label className="font-medium">Progress updates</label>
-                    <p className="text-sm text-gray-500">
-                      Get notified about your fitness progress
-                    </p>
-                  </div>
-                  <Switch id="progress-notifications" defaultChecked disabled />
+                <div className="space-y-2">
+                  <label className="font-medium">Theme</label>
+                  <Select 
+                    value={theme} 
+                    onValueChange={(value) => setTheme(value as "light" | "dark" | "system")}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a theme" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="system">System</SelectItem>
+                      <SelectItem value="light">Light</SelectItem>
+                      <SelectItem value="dark">Dark</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-sm text-gray-500">
+                    Select your preferred theme or use system settings.
+                  </p>
                 </div>
-                
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <label className="font-medium">New features</label>
-                    <p className="text-sm text-gray-500">
-                      Learn about new app features and updates
-                    </p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="notifications" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Notifications</CardTitle>
+                <CardDescription>
+                  Configure how you receive notifications.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="border rounded-md p-4 bg-muted/20">
+                  <div className="flex gap-2 items-center text-muted-foreground mb-2">
+                    <Info className="h-4 w-4" />
+                    <p className="text-sm font-medium">Notifications Coming Soon</p>
                   </div>
-                  <Switch id="feature-notifications" disabled />
+                  <p className="text-sm text-muted-foreground">
+                    The notification system is currently under development. Check back soon for updates!
+                  </p>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              
+                <div className="space-y-4 opacity-60 pointer-events-none">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <label className="font-medium">Workout reminders</label>
+                      <p className="text-sm text-gray-500">
+                        Receive reminders for scheduled workouts
+                      </p>
+                    </div>
+                    <Switch id="workout-notifications" defaultChecked disabled />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <label className="font-medium">Progress updates</label>
+                      <p className="text-sm text-gray-500">
+                        Get notified about your fitness progress
+                      </p>
+                    </div>
+                    <Switch id="progress-notifications" defaultChecked disabled />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <label className="font-medium">New features</label>
+                      <p className="text-sm text-gray-500">
+                        Learn about new app features and updates
+                      </p>
+                    </div>
+                    <Switch id="feature-notifications" disabled />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+        
+        {/* Add API Key Manager */}
+        <section>
+          <ApiKeyManager />
+        </section>
+      </div>
       
       {/* Add the Admin Access section */}
       <div className="mt-8">
@@ -386,4 +392,6 @@ export default function Settings() {
       </div>
     </div>
   );
-}
+};
+
+export default Settings;
