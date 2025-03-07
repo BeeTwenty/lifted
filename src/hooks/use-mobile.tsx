@@ -30,6 +30,41 @@ export function useIsMobile() {
   return !!isMobile
 }
 
+// Enhanced hook to detect device platform
+export function useDevicePlatform() {
+  const [platform, setPlatform] = React.useState<{
+    isAndroid: boolean;
+    isIOS: boolean;
+    isMobile: boolean;
+  }>({
+    isAndroid: false,
+    isIOS: false,
+    isMobile: false
+  })
+  
+  React.useEffect(() => {
+    const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera || '';
+    
+    // Check for Android
+    const isAndroid = /android/i.test(userAgent);
+    
+    // Check for iOS
+    const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream;
+    
+    // General mobile check
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent) ||
+      (window.innerWidth < MOBILE_BREAKPOINT);
+    
+    setPlatform({
+      isAndroid,
+      isIOS,
+      isMobile
+    })
+  }, [])
+  
+  return platform
+}
+
 // Helper to get viewport dimensions
 export function useViewport() {
   const [dimensions, setDimensions] = React.useState({

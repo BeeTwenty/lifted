@@ -208,6 +208,7 @@ export type Database = {
           id: string
           name: string
           notes: string | null
+          order: number | null
           reps: number
           rest_time: number | null
           sets: number
@@ -218,6 +219,7 @@ export type Database = {
           id?: string
           name: string
           notes?: string | null
+          order?: number | null
           reps: number
           rest_time?: number | null
           sets: number
@@ -228,6 +230,7 @@ export type Database = {
           id?: string
           name?: string
           notes?: string | null
+          order?: number | null
           reps?: number
           rest_time?: number | null
           sets?: number
