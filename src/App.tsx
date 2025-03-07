@@ -39,7 +39,7 @@ const AppSuggestion = () => {
               <p>Get a better experience with our Android app</p>
               <a 
                 href={APP_LINKS.ANDROID_APK} 
-                className="bg-primary text-white px-4 py-2 rounded text-center"
+                className="bg-primary text-white dark:text-black px-4 py-2 rounded text-center"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -57,7 +57,7 @@ const AppSuggestion = () => {
               <p>Try our optimized mobile web version</p>
               <a 
                 href={APP_LINKS.WEB_APP} 
-                className="bg-primary text-white  px-4 py-2 rounded text-center"
+                className="bg-primary text-white dark:text-black  px-4 py-2 rounded text-center"
                 target="_blank"
                 rel="noopener noreferrer"
               >
