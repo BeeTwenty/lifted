@@ -4,7 +4,8 @@ import { useForm } from "react-hook-form";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Save, Clock, ListPlus, Pencil, Dumbbell, BarChart4 } from "lucide-react";
+import { Plus, Search, Save, Clock, ListPlus, Pencil, Dumbbell, BarChart4, XCircle } from "lucide-react";
+
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
@@ -209,6 +210,8 @@ export const CreateWorkoutDialog = () => {
     }
   });
 
+  
+
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);
     if (newOpen) {
@@ -303,167 +306,112 @@ export const CreateWorkoutDialog = () => {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button className="bg-primary/90 hover:bg-primary">
-          <Plus className="mr-2 h-4 w-4" />
-          Create Routine
+        <Button className="w-full sm:w-auto flex items-center gap-2 bg-primary hover:bg-primary/90">
+          <Plus className="h-5 w-5" /> Create Routine
         </Button>
       </DialogTrigger>
-      <DialogContent className={`sm:max-w-[600px] ${isMobile ? 'p-3' : 'p-6'}`}>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <DialogHeader className="mb-4">
-            <DialogTitle className="flex items-center gap-2 text-xl">
-              <Dumbbell className="h-5 w-5" />
-              Create New Routine
+      <DialogContent className={`w-full max-w-[95vw] sm:max-w-[600px] rounded-lg p-${isMobile ? '4' : '6'}`}>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
+              <Dumbbell className="h-5 w-5" /> Create New Routine
             </DialogTitle>
-            <DialogDescription>
-              Design a custom workout with the exercises you want.
-            </DialogDescription>
+            <DialogDescription>Plan your workout by adding exercises and details.</DialogDescription>
           </DialogHeader>
-          <div className={`grid gap-5 ${isMobile ? 'max-h-[65vh]' : 'max-h-[70vh]'} overflow-y-auto p-1`}>
-            <Card className="border-2 border-primary/20">
-              <CardContent className="pt-6">
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="title" className="flex items-center text-base">
-                        <Pencil className="mr-1.5 h-4 w-4" />
-                        Routine Name
-                      </Label>
-                      <Input
-                        id="title"
-                        {...register("title", { required: "Title is required" })}
-                        placeholder="e.g., Upper Body Workout"
-                        className="border-primary/20 focus:border-primary"
-                      />
-                      {errors.title && (
-                        <p className="text-sm text-destructive">{errors.title.message}</p>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="duration" className="flex items-center text-base">
-                        <Clock className="mr-1.5 h-4 w-4" />
-                        Duration (minutes)
-                      </Label>
-                      <Input
-                        id="duration"
-                        type="number"
-                        {...register("duration", { required: "Duration is required" })}
-                        placeholder="30"
-                        className="border-primary/20 focus:border-primary"
-                      />
-                      {errors.duration && (
-                        <p className="text-sm text-destructive">{errors.duration.message}</p>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="default-rest" className="flex items-center text-base">
-                      Rest Time Between Sets ({defaultRestTime} seconds)
-                    </Label>
-                    <Slider 
-                      id="default-rest"
-                      min={10} 
-                      max={180} 
-                      step={5} 
-                      defaultValue={[60]} 
-                      value={[defaultRestTime]}
-                      onValueChange={(value) => setDefaultRestTime(value[0])}
-                    />
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="notes" className="flex items-center text-base">
-                      <ListPlus className="mr-1.5 h-4 w-4" />
-                      Notes (optional)
-                    </Label>
-                    <Textarea
-                      id="notes"
-                      {...register("notes")}
-                      placeholder="Any additional notes about the workout..."
-                      className="max-h-[100px] border-primary/20 focus:border-primary"
-                    />
-                  </div>
+          <ScrollArea className="max-h-[65vh] overflow-y-auto">
+            <Card className="border-2 border-primary/20">
+              <CardContent className="p-4 space-y-4">
+                <div>
+                  <Label htmlFor="title" className="flex items-center gap-2 text-base">
+                    <Pencil className="h-4 w-4" /> Routine Name
+                  </Label>
+                  <Input id="title" {...register("title", { required: "Title is required" })} placeholder="e.g., Upper Body Workout" />
+                  {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
+                </div>
+
+                <div>
+                  <Label htmlFor="duration" className="flex items-center gap-2 text-base">
+                    <Clock className="h-4 w-4" /> Duration (minutes)
+                  </Label>
+                  <Input id="duration" type="number" {...register("duration", { required: "Duration is required" })} placeholder="30" />
+                  {errors.duration && <p className="text-sm text-destructive">{errors.duration.message}</p>}
+                </div>
+
+                <div>
+                  <Label className="text-base">Rest Time Between Sets ({defaultRestTime}s)</Label>
+                  <Slider min={10} max={180} step={5} value={[defaultRestTime]} onValueChange={(value) => setDefaultRestTime(value[0])} />
+                </div>
+
+                <div>
+                  <Label htmlFor="notes" className="flex items-center gap-2 text-base">
+                    <ListPlus className="h-4 w-4" /> Notes (optional)
+                  </Label>
+                  <Textarea id="notes" {...register("notes")} placeholder="Any additional notes about the workout..." className="resize-none h-24" />
                 </div>
               </CardContent>
             </Card>
 
-            <Separator className="my-1" />
-
-            <div className="space-y-4">
-              <h3 className="font-medium flex items-center text-lg">
-                <BarChart4 className="mr-1.5 h-4.5 w-4.5" />
-                Exercises <Badge variant="outline" className="ml-2">{exercises.length}</Badge>
+            <div className="mt-4 space-y-4">
+              <h3 className="flex items-center text-lg font-medium">
+                <BarChart4 className="h-5 w-5" /> Exercises <Badge className="ml-2">{exercises.length}</Badge>
               </h3>
-              
-              <ExerciseInput 
-                onAddExercise={(exercise) => setExercises([...exercises, exercise])} 
-                defaultRestTime={defaultRestTime} 
-                templates={templates} 
-              />
-              
+              {/* Exercise Input Component (Placeholder) */}
+              <Button onClick={() => 
+  setExercises([
+    ...exercises, 
+    { 
+      id: (exercises.length + 1).toString(), // Convert number to string
+      name: "New Exercise", 
+      sets: 3, 
+      reps: 12, 
+      rest_time: defaultRestTime,
+      weight: 0, // Default weight
+      notes: ""  // Default notes
+    }
+  ])
+}>
+  Add Exercise
+</Button>
+
+
               {exercises.length > 0 && (
-                <div className="mt-4">
-                  <ScrollArea className={`${exercises.length > 3 ? 'h-[200px]' : ''}`}>
-                    <div className="space-y-2 pr-4">
-                      {exercises.map((exercise, index) => (
-                        <Card key={exercise.id} className="border-gray-200 dark:border-gray-700">
-                          <CardContent className="p-3 flex justify-between items-center">
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="mr-1">#{index + 1}</Badge>
-                                <div className="font-medium">{exercise.name}</div>
-                              </div>
-                              <div className="text-sm text-muted-foreground mt-1 flex flex-wrap gap-2">
-                                <span className="bg-secondary/10 p-1 px-2 rounded-sm">
-                                  {exercise.sets} × {exercise.reps}
-                                </span>
-                                {exercise.weight ? (
-                                  <span className="bg-secondary/10 p-1 px-2 rounded-sm">
-                                    {exercise.weight}kg
-                                  </span>
-                                ) : null}
-                                <span className="bg-secondary/10 p-1 px-2 rounded-sm flex items-center">
-                                  <Clock className="h-3 w-3 mr-1 opacity-70" />
-                                  {exercise.rest_time}s
-                                </span>
-                              </div>
+                <ScrollArea className="h-auto max-h-[200px]">
+                  <div className="space-y-2">
+                    {exercises.map((exercise, index) => (
+                      <Card key={exercise.id} className="border-gray-200 dark:border-gray-700">
+                        <CardContent className="p-3 flex justify-between items-center">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline">#{index + 1}</Badge>
+                              <div className="font-medium">{exercise.name}</div>
                             </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRemoveExercise(exercise.id)}
-                              className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
-                            >
-                              Remove
-                            </Button>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </div>
+                            <div className="text-sm text-muted-foreground mt-1 flex gap-2">
+                              <span className="bg-secondary/10 p-1 px-2 rounded-md">{exercise.sets} × {exercise.reps}</span>
+                              <span className="bg-secondary/10 p-1 px-2 rounded-md flex items-center">
+                                <Clock className="h-3 w-3 mr-1 opacity-70" /> {exercise.rest_time}s
+                              </span>
+                            </div>
+                          </div>
+                          <Button variant="ghost" size="sm" onClick={() => setExercises(exercises.filter((_, i) => i !== index))} className="text-destructive hover:text-destructive/90">
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </ScrollArea>
               )}
             </div>
-          </div>
-          <DialogFooter className="mt-6">
+          </ScrollArea>
+
+          <DialogFooter>
             <Button type="submit" disabled={loading} className="w-full sm:w-auto gap-1.5">
-              {loading ? (
-                <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  Create Routine
-                </>
-              )}
+              {loading ? <div className="h-4 w-4 animate-spin border-2 border-current border-t-transparent"></div> : <Save className="h-5 w-5" />} Create Routine
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
   );
-};
+}
