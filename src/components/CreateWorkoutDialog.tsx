@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Save, Clock, ListPlus, Pencil, Dumbbell, BarChart4, XCircle } from "lucide-react";
+import { Plus, Search, Save, Clock, ListPlus, Pencil, Dumbbell, BarChart4, XCircle, MoveUp, MoveDown } from "lucide-react";
 
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -210,8 +210,6 @@ export const CreateWorkoutDialog = () => {
     }
   });
 
-  
-
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);
     if (newOpen) {
@@ -238,6 +236,23 @@ export const CreateWorkoutDialog = () => {
 
   const handleRemoveExercise = (id: string) => {
     setExercises(exercises.filter(exercise => exercise.id !== id));
+  };
+
+  const moveExercise = (index: number, direction: 'up' | 'down') => {
+    if (
+      (direction === 'up' && index === 0) || 
+      (direction === 'down' && index === exercises.length - 1)
+    ) {
+      return; // Can't move further in this direction
+    }
+    
+    const newExercises = [...exercises];
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    
+    // Swap the exercises
+    [newExercises[index], newExercises[newIndex]] = [newExercises[newIndex], newExercises[index]];
+    
+    setExercises(newExercises);
   };
 
   const onSubmit = async (data: any) => {
@@ -270,9 +285,11 @@ export const CreateWorkoutDialog = () => {
 
       if (workoutError) throw workoutError;
 
-      const exercisesWithWorkoutId = exercises.map(exercise => ({
+      // Add order property to each exercise based on its position in the array
+      const exercisesWithWorkoutId = exercises.map((exercise, index) => ({
         ...exercise,
-        workout_id: workoutData.id
+        workout_id: workoutData.id,
+        order: index
       }));
 
       const { error: exercisesError } = await supabase
@@ -319,7 +336,7 @@ export const CreateWorkoutDialog = () => {
             <DialogDescription>Plan your workout by adding exercises and details.</DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="max-h-[65vh] overflow-y-auto">
+          <div className="max-h-[65vh] overflow-auto pr-1">
             <Card className="border-2 border-primary/20">
               <CardContent className="p-4 space-y-4">
                 <div>
@@ -354,34 +371,22 @@ export const CreateWorkoutDialog = () => {
 
             <div className="mt-4 space-y-4">
               <h3 className="flex items-center text-lg font-medium">
-                <BarChart4 className="h-5 w-5" /> Exercises <Badge className="ml-2">{exercises.length}</Badge>
+                <BarChart4 className="h-5 w-5 mr-2" /> Exercises <Badge className="ml-2">{exercises.length}</Badge>
               </h3>
-              {/* Exercise Input Component (Placeholder) */}
-              <Button onClick={() => 
-  setExercises([
-    ...exercises, 
-    { 
-      id: (exercises.length + 1).toString(), // Convert number to string
-      name: "New Exercise", 
-      sets: 3, 
-      reps: 12, 
-      rest_time: defaultRestTime,
-      weight: 0, // Default weight
-      notes: ""  // Default notes
-    }
-  ])
-}>
-  Add Exercise
-</Button>
 
+              <ExerciseInput 
+                onAddExercise={(exercise) => setExercises([...exercises, exercise])}
+                defaultRestTime={defaultRestTime}
+                templates={templates}
+              />
 
               {exercises.length > 0 && (
-                <ScrollArea className="h-auto max-h-[200px]">
+                <div className="max-h-[300px] overflow-y-auto pr-1 mt-4">
                   <div className="space-y-2">
                     {exercises.map((exercise, index) => (
                       <Card key={exercise.id} className="border-gray-200 dark:border-gray-700">
                         <CardContent className="p-3 flex justify-between items-center">
-                          <div>
+                          <div className="flex-1">
                             <div className="flex items-center gap-2">
                               <Badge variant="outline">#{index + 1}</Badge>
                               <div className="font-medium">{exercise.name}</div>
@@ -393,17 +398,42 @@ export const CreateWorkoutDialog = () => {
                               </span>
                             </div>
                           </div>
-                          <Button variant="ghost" size="sm" onClick={() => setExercises(exercises.filter((_, i) => i !== index))} className="text-destructive hover:text-destructive/90">
-                            <XCircle className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => moveExercise(index, 'up')}
+                              className="text-gray-500" 
+                              disabled={index === 0}
+                            >
+                              <MoveUp className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => moveExercise(index, 'down')}
+                              className="text-gray-500"
+                              disabled={index === exercises.length - 1}
+                            >
+                              <MoveDown className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => setExercises(exercises.filter((_, i) => i !== index))} 
+                              className="text-destructive hover:text-destructive/90"
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </CardContent>
                       </Card>
                     ))}
                   </div>
-                </ScrollArea>
+                </div>
               )}
             </div>
-          </ScrollArea>
+          </div>
 
           <DialogFooter>
             <Button type="submit" disabled={loading} className="w-full sm:w-auto gap-1.5">

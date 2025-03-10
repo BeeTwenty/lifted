@@ -348,6 +348,27 @@ export type Database = {
         }
         Relationships: []
       }
+      rest_timers: {
+        Row: {
+          created_at: string | null
+          end_time: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          end_time: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          end_time?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       weight_records: {
         Row: {
           created_at: string

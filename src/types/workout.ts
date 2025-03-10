@@ -7,6 +7,7 @@ export interface Exercise {
   weight: number | null;
   notes: string | null;
   rest_time?: number | null;
+  order?: number;
 }
 
 export interface ExerciseTemplate {
