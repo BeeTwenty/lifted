@@ -212,6 +212,7 @@ export type Database = {
           reps: number
           rest_time: number | null
           sets: number
+          template_id: string | null
           weight: number | null
           workout_id: string
         }
@@ -223,6 +224,7 @@ export type Database = {
           reps: number
           rest_time?: number | null
           sets: number
+          template_id?: string | null
           weight?: number | null
           workout_id: string
         }
@@ -234,10 +236,18 @@ export type Database = {
           reps?: number
           rest_time?: number | null
           sets?: number
+          template_id?: string | null
           weight?: number | null
           workout_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "exercises_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "exercise_templates"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "exercises_workout_id_fkey"
             columns: ["workout_id"]
@@ -316,6 +326,7 @@ export type Database = {
           height: number | null
           hour_goal: number | null
           id: string
+          status: string | null
           updated_at: string
           username: string | null
           workout_goal: number | null
@@ -329,6 +340,7 @@ export type Database = {
           height?: number | null
           hour_goal?: number | null
           id: string
+          status?: string | null
           updated_at?: string
           username?: string | null
           workout_goal?: number | null
@@ -342,6 +354,7 @@ export type Database = {
           height?: number | null
           hour_goal?: number | null
           id?: string
+          status?: string | null
           updated_at?: string
           username?: string | null
           workout_goal?: number | null
