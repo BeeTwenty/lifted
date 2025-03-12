@@ -89,23 +89,25 @@ export function SubscriptionManager() {
       const { data: sessionAuth } = await supabase.auth.getSession();
       if (!sessionAuth.session) throw new Error("No active session");
 
-      const response = await fetch(`${supabase.functions.url}/stripe/create-checkout-session`, {
+      // Use invoke method instead of directly accessing the URL
+      const { data, error } = await supabase.functions.invoke("stripe/create-checkout-session", {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sessionAuth.session.access_token}`,
+          Authorization: `Bearer ${sessionAuth.session.access_token}`,
         },
-        body: JSON.stringify({
+        body: {
           priceId: plan.stripePriceId,
           successUrl: window.location.origin,
           cancelUrl: window.location.origin,
-        }),
+        },
       });
-
-      const data = await response.json();
       
-      if (data.error) {
-        throw new Error(data.error);
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (!data || !data.url) {
+        throw new Error("Invalid response from server");
       }
 
       // Redirect to Stripe checkout
@@ -129,19 +131,21 @@ export function SubscriptionManager() {
       const { data: sessionAuth } = await supabase.auth.getSession();
       if (!sessionAuth.session) throw new Error("No active session");
 
-      const response = await fetch(`${supabase.functions.url}/stripe/customer-portal`, {
+      // Use invoke method instead of directly accessing the URL
+      const { data, error } = await supabase.functions.invoke("stripe/customer-portal", {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sessionAuth.session.access_token}`,
+          Authorization: `Bearer ${sessionAuth.session.access_token}`,
         },
-        body: JSON.stringify({}),
+        body: {},
       });
-
-      const data = await response.json();
       
-      if (data.error) {
-        throw new Error(data.error);
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (!data || !data.url) {
+        throw new Error("Invalid response from server");
       }
 
       // Redirect to Stripe customer portal
