@@ -89,7 +89,7 @@ export function SubscriptionManager() {
       const { data: sessionAuth } = await supabase.auth.getSession();
       if (!sessionAuth.session) throw new Error("No active session");
 
-      // Use invoke method instead of directly accessing the URL
+      // Use invoke method to call the Stripe edge function
       const { data, error } = await supabase.functions.invoke("stripe/create-checkout-session", {
         method: 'POST',
         headers: {
@@ -131,7 +131,7 @@ export function SubscriptionManager() {
       const { data: sessionAuth } = await supabase.auth.getSession();
       if (!sessionAuth.session) throw new Error("No active session");
 
-      // Use invoke method instead of directly accessing the URL
+      // Use invoke method to call the Stripe edge function
       const { data, error } = await supabase.functions.invoke("stripe/customer-portal", {
         method: 'POST',
         headers: {

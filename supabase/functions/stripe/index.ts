@@ -104,6 +104,7 @@ async function handleCreateCheckoutSession(userId, data, supabase) {
 
   if (paymentData && paymentData.length > 0 && paymentData[0].stripe_customer_id) {
     stripeCustomerId = paymentData[0].stripe_customer_id;
+    console.log('Using existing Stripe customer:', stripeCustomerId);
   } else {
     // Create a new customer
     const { data: userData } = await supabase.auth.admin.getUserById(userId);
@@ -114,6 +115,7 @@ async function handleCreateCheckoutSession(userId, data, supabase) {
       },
     });
     stripeCustomerId = customer.id;
+    console.log('Created new Stripe customer:', stripeCustomerId);
   }
 
   // Create the checkout session
@@ -133,6 +135,7 @@ async function handleCreateCheckoutSession(userId, data, supabase) {
     },
   });
 
+  console.log('Created checkout session:', session.id);
   return { url: session.url };
 }
 
@@ -153,11 +156,12 @@ async function handleCustomerPortal(userId, supabase) {
   }
 
   const stripeCustomerId = paymentData[0].stripe_customer_id;
+  console.log('Using customer portal for:', stripeCustomerId);
 
   // Create a billing portal session
   const session = await stripe.billingPortal.sessions.create({
     customer: stripeCustomerId,
-    return_url: 'https://your-site.com/account',
+    return_url: `${window.location.origin}/settings`,
   });
 
   return { url: session.url };
@@ -169,17 +173,18 @@ async function handleWebhook(req, supabase) {
     throw new Error('No Stripe signature found');
   }
 
-  const body = await req.text();
   const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
-  
   if (!webhookSecret) {
     console.error('STRIPE_WEBHOOK_SECRET is not configured.');
     throw new Error('Webhook secret not configured');
   }
   
+  const body = await req.text();
+  
   let event;
   try {
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    console.log(`Webhook event verified: ${event.type}`);
   } catch (err) {
     console.error(`Webhook signature verification failed: ${err.message}`);
     throw new Error(`Webhook signature verification failed: ${err.message}`);
@@ -207,10 +212,16 @@ async function handleWebhook(req, supabase) {
       });
       
       // Update the user's profile status to 'pro'
-      await supabase
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({ status: 'pro' })
         .eq('id', userId);
+        
+      if (updateError) {
+        console.error('Error updating user status:', updateError);
+      } else {
+        console.log(`Successfully updated user ${userId} to pro status`);
+      }
       
       break;
     }
@@ -238,10 +249,16 @@ async function handleWebhook(req, supabase) {
       console.log(`Updating user ${userId} status to ${status}`);
       
       // Update the user's profile status
-      await supabase
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({ status })
         .eq('id', userId);
+        
+      if (updateError) {
+        console.error('Error updating user status:', updateError);
+      } else {
+        console.log(`Successfully updated user ${userId} to ${status} status`);
+      }
       
       break;
     }
@@ -268,10 +285,16 @@ async function handleWebhook(req, supabase) {
       console.log(`Downgrading user ${userId} to basic plan`);
       
       // Update the user's profile status to 'basic'
-      await supabase
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({ status: 'basic' })
         .eq('id', userId);
+        
+      if (updateError) {
+        console.error('Error updating user status:', updateError);
+      } else {
+        console.log(`Successfully downgraded user ${userId} to basic status`);
+      }
       
       break;
     }
