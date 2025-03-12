@@ -29,7 +29,12 @@ serve(async (req) => {
     // Initialize Supabase client with service role key to bypass RLS
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Verify the session
+    // Handle webhook requests separately as they don't require authentication
+    if (endpoint === 'webhook') {
+      return handleWebhook(req, supabaseAdmin);
+    }
+
+    // Verify the session for non-webhook endpoints
     const authHeader = req.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       throw new Error('Missing or invalid authorization header');
@@ -55,10 +60,6 @@ serve(async (req) => {
         break;
       case 'customer-portal':
         result = await handleCustomerPortal(userId, supabaseAdmin);
-        break;
-      case 'webhook':
-        // For webhook, we don't need authentication
-        result = await handleWebhook(req, supabaseAdmin);
         break;
       default:
         throw new Error('Invalid endpoint');
@@ -171,10 +172,16 @@ async function handleWebhook(req, supabase) {
   const body = await req.text();
   const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
   
+  if (!webhookSecret) {
+    console.error('STRIPE_WEBHOOK_SECRET is not configured.');
+    throw new Error('Webhook secret not configured');
+  }
+  
   let event;
   try {
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
+    console.error(`Webhook signature verification failed: ${err.message}`);
     throw new Error(`Webhook signature verification failed: ${err.message}`);
   }
 
@@ -185,6 +192,8 @@ async function handleWebhook(req, supabase) {
       const session = event.data.object;
       const userId = session.metadata.user_id;
       const customerId = session.customer;
+      
+      console.log('Processing completed checkout for user:', userId);
       
       // Record the payment
       await supabase.from('payments').insert({
@@ -209,6 +218,8 @@ async function handleWebhook(req, supabase) {
       const subscription = event.data.object;
       const customerId = subscription.customer;
       
+      console.log('Processing subscription update for customer:', customerId);
+      
       // Find the user associated with this customer
       const { data: paymentData, error: paymentError } = await supabase
         .from('payments')
@@ -224,6 +235,8 @@ async function handleWebhook(req, supabase) {
       const userId = paymentData[0].user_id;
       const status = subscription.status === 'active' ? 'pro' : 'basic';
       
+      console.log(`Updating user ${userId} status to ${status}`);
+      
       // Update the user's profile status
       await supabase
         .from('profiles')
@@ -235,6 +248,8 @@ async function handleWebhook(req, supabase) {
     case 'customer.subscription.deleted': {
       const subscription = event.data.object;
       const customerId = subscription.customer;
+      
+      console.log('Processing subscription deletion for customer:', customerId);
       
       // Find the user associated with this customer
       const { data: paymentData, error: paymentError } = await supabase
@@ -250,6 +265,8 @@ async function handleWebhook(req, supabase) {
       
       const userId = paymentData[0].user_id;
       
+      console.log(`Downgrading user ${userId} to basic plan`);
+      
       // Update the user's profile status to 'basic'
       await supabase
         .from('profiles')
@@ -260,5 +277,7 @@ async function handleWebhook(req, supabase) {
     }
   }
 
-  return { received: true };
+  return new Response(JSON.stringify({ received: true }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 }
