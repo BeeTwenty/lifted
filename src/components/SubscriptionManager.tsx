@@ -83,46 +83,47 @@ export function SubscriptionManager() {
   };
 
   const handleCheckout = async (plan: SubscriptionPlan) => {
-    try {
-      setCheckoutLoading(true);
-      
-      const { data: sessionAuth } = await supabase.auth.getSession();
-      if (!sessionAuth.session) throw new Error("No active session");
+  try {
+    setCheckoutLoading(true);
+    
+    const { data: sessionAuth } = await supabase.auth.getSession();
+    if (!sessionAuth.session) throw new Error("No active session");
 
-      // Use invoke method to call the Stripe edge function
-      const { data, error } = await supabase.functions.invoke("stripe/create-checkout-session", {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${sessionAuth.session.access_token}`,
-        },
-        body: {
-          priceId: plan.stripePriceId,
-          successUrl: window.location.origin,
-          cancelUrl: window.location.origin,
-        },
-      });
-      
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      if (!data || !data.url) {
-        throw new Error("Invalid response from server");
-      }
-
-      // Redirect to Stripe checkout
-      window.location.href = data.url;
-    } catch (error: any) {
-      console.error("Error creating checkout session:", error);
-      toast({
-        variant: "destructive",
-        title: "Checkout Error",
-        description: error.message,
-      });
-    } finally {
-      setCheckoutLoading(false);
+    // Use invoke method to call the Stripe edge function
+    const { data, error } = await supabase.functions.invoke("stripe/create-checkout-session", {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${sessionAuth.session.access_token}`,
+        'Content-Type': 'application/json', // Ensure content type is set
+      },
+      body: JSON.stringify({
+        priceId: plan.stripePriceId,
+        successUrl: window.location.origin,
+        cancelUrl: window.location.origin,
+      }),
+    });
+    
+    if (error) {
+      throw new Error(error.message);
     }
-  };
+
+    if (!data || !data.url) {
+      throw new Error("Invalid response from server");
+    }
+
+    // Redirect to Stripe checkout
+    window.location.href = data.url;
+  } catch (error: any) {
+    console.error("Error creating checkout session:", error);
+    toast({
+      variant: "destructive",
+      title: "Checkout Error",
+      description: error.message,
+    });
+  } finally {
+    setCheckoutLoading(false);
+  }
+};
 
   const handleManageSubscription = async () => {
     try {
