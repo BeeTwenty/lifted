@@ -37,4 +37,29 @@ export interface UserProfile {
   hour_goal?: number;
   height?: number;
   updated_at?: string;
+  status?: string;
+}
+
+export interface SubscriptionPlan {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  currency: string;
+  interval: 'month' | 'year';
+  features: string[];
+  stripeProductId: string;
+  stripePriceId: string;
+}
+
+export interface Payment {
+  id: string;
+  user_id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  payment_method?: string;
+  created_at?: string;
+  stripe_payment_id?: string;
+  stripe_customer_id?: string;
 }

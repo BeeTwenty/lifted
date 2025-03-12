@@ -57,6 +57,16 @@ serve(async (req) => {
     const user_id = apiKeyData.user_id;
     console.log('Verified user_id:', user_id);
 
+    // Check if user has pro status
+    const { data: profileData, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('status')
+      .eq('id', user_id)
+      .single();
+      
+    const isPro = profileData?.status === 'pro';
+    console.log('User pro status:', isPro);
+
     // Handle different endpoints
     const pathParts = url.pathname.split('/');
     const endpoint = pathParts[pathParts.length - 1];
@@ -71,10 +81,31 @@ serve(async (req) => {
       case 'exercises':
         result = await handleExercises(req, supabaseAdmin, user_id);
         break;
+      case 'weights':
+        // Weight endpoint requires pro status
+        if (!isPro) {
+          throw new Error('Pro subscription required for weight tracking');
+        }
+        result = await handleWeights(req, supabaseAdmin, user_id);
+        break;
+      case 'stats':
+        // Stats endpoint requires pro status
+        if (!isPro) {
+          throw new Error('Pro subscription required for detailed stats');
+        }
+        result = await handleStats(req, supabaseAdmin, user_id);
+        break;
+      case 'subscription':
+        result = await handleSubscription(req, supabaseAdmin, user_id);
+        break;
       case 'api':
       case '':
         // Handle the root endpoint or /api endpoint
-        result = { message: "API is working correctly", endpoints: ["workouts", "exercises"] };
+        result = { 
+          message: "API is working correctly", 
+          endpoints: ["workouts", "exercises", "weights", "stats", "subscription"],
+          user: { id: user_id, pro: isPro }
+        };
         break;
       default:
         throw new Error('Invalid endpoint');
@@ -88,7 +119,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
-        status: error.message.includes('API key') ? 401 : 500,
+        status: error.message.includes('API key') || error.message.includes('Pro subscription') ? 401 : 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
@@ -133,4 +164,108 @@ async function handleExercises(req: Request, supabase: any, userId: string) {
     default:
       throw new Error(`Method ${req.method} not allowed`);
   }
+}
+
+async function handleWeights(req: Request, supabase: any, userId: string) {
+  switch (req.method) {
+    case 'GET':
+      const { data, error } = await supabase
+        .from('weight_records')
+        .select('*')
+        .eq('user_id', userId)
+        .order('date', { ascending: true });
+      if (error) throw error;
+      return data;
+      
+    case 'POST':
+      const body = await req.json();
+      const { data: newWeight, error: createError } = await supabase
+        .from('weight_records')
+        .insert([{ ...body, user_id: userId }])
+        .select()
+        .single();
+      if (createError) throw createError;
+      return newWeight;
+
+    default:
+      throw new Error(`Method ${req.method} not allowed`);
+  }
+}
+
+async function handleStats(req: Request, supabase: any, userId: string) {
+  // Only support GET for stats
+  if (req.method !== 'GET') {
+    throw new Error(`Method ${req.method} not allowed`);
+  }
+  
+  // Get profile data with goals
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('workout_goal, hour_goal')
+    .eq('id', userId)
+    .single();
+    
+  if (profileError) throw profileError;
+  
+  // Get completed workouts (last 30 days)
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  
+  const { data: completedWorkouts, error: workoutsError } = await supabase
+    .from('completed_workouts')
+    .select('*')
+    .eq('user_id', userId)
+    .gte('completed_at', thirtyDaysAgo.toISOString())
+    .order('completed_at', { ascending: false });
+    
+  if (workoutsError) throw workoutsError;
+  
+  // Get weight records (last 30 days)
+  const { data: weightRecords, error: weightError } = await supabase
+    .from('weight_records')
+    .select('*')
+    .eq('user_id', userId)
+    .gte('date', thirtyDaysAgo.toISOString().split('T')[0])
+    .order('date', { ascending: true });
+    
+  if (weightError) throw weightError;
+  
+  return {
+    goals: {
+      workout: profile?.workout_goal || 5,
+      hour: profile?.hour_goal || 10
+    },
+    completedWorkouts,
+    weightRecords
+  };
+}
+
+async function handleSubscription(req: Request, supabase: any, userId: string) {
+  // Only support GET for subscription status
+  if (req.method !== 'GET') {
+    throw new Error(`Method ${req.method} not allowed`);
+  }
+  
+  // Get profile data with status
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('status')
+    .eq('id', userId)
+    .single();
+    
+  if (profileError) throw profileError;
+  
+  // Get payment history
+  const { data: payments, error: paymentsError } = await supabase
+    .from('payments')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+    
+  if (paymentsError) throw paymentsError;
+  
+  return {
+    status: profile?.status || 'basic',
+    payments: payments || []
+  };
 }

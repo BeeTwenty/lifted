@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dumbbell, Plus, Calendar, Award, History, LineChart, Settings, LogOut, Download } from "lucide-react";
+import { Dumbbell, Plus, Calendar, Award, History, LineChart, Settings, LogOut, Download, CreditCard } from "lucide-react";
 import { WorkoutCard } from "@/components/WorkoutCard";
 import { WorkoutStats } from "@/components/WorkoutStats";
 import { WorkoutPlayer } from "@/components/WorkoutPlayer";
@@ -18,6 +18,7 @@ import { ExerciseHistoryTracker } from "@/components/ExerciseHistoryTracker";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { WeightTracker } from "@/components/WeightTracker";
 import { WorkoutExport } from "@/components/WorkoutExport";
+import { SubscriptionManager } from "@/components/SubscriptionManager";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -223,7 +224,7 @@ const Index = () => {
       </div>
 
       <Tabs defaultValue="workouts" className="w-full">
-        <TabsList className="grid grid-cols-4">
+        <TabsList className="grid grid-cols-5">
           <TabsTrigger value="workouts">
             <Dumbbell className="h-4 w-4 mr-2" /> Workouts
           </TabsTrigger>
@@ -235,6 +236,9 @@ const Index = () => {
           </TabsTrigger>
           <TabsTrigger value="export">
             <Download className="h-4 w-4 mr-2" /> Export
+          </TabsTrigger>
+          <TabsTrigger value="subscription">
+            <CreditCard className="h-4 w-4 mr-2" /> Pro
           </TabsTrigger>
         </TabsList>
         
@@ -279,6 +283,10 @@ const Index = () => {
 
         <TabsContent value="export">
           <WorkoutExport />
+        </TabsContent>
+
+        <TabsContent value="subscription">
+          <SubscriptionManager />
         </TabsContent>
       </Tabs>
 

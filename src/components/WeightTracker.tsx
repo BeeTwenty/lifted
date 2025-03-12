@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { format, parseISO, subMonths } from "date-fns";
 import { WeightRecord } from "@/types/workout";
-import { Trash2 } from "lucide-react";
+import { Trash2, Lock, CreditCard } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export const WeightTracker = () => {
   const [weightRecords, setWeightRecords] = useState<WeightRecord[]>([]);
@@ -16,12 +17,33 @@ export const WeightTracker = () => {
   const [height, setHeight] = useState<string>("");
   const [bmi, setBmi] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isPro, setIsPro] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
+    checkProStatus();
     fetchWeightRecords();
     fetchUserProfile();
   }, []);
+
+  const checkProStatus = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("status")
+        .eq("id", user.id)
+        .single();
+
+      if (error) throw error;
+      
+      setIsPro(data?.status === "pro");
+    } catch (error: any) {
+      console.error("Error checking pro status:", error.message);
+    }
+  };
 
   const fetchWeightRecords = async () => {
     try {
@@ -89,6 +111,15 @@ export const WeightTracker = () => {
   };
 
   const handleAddWeight = async () => {
+    if (!isPro) {
+      toast({
+        variant: "destructive",
+        title: "Pro Feature",
+        description: "Weight tracking is a Pro feature. Please upgrade to continue.",
+      });
+      return;
+    }
+
     if (!newWeight) {
       toast({
         variant: "destructive",
@@ -135,6 +166,15 @@ export const WeightTracker = () => {
   };
 
   const handleDeleteWeight = async (id: string) => {
+    if (!isPro) {
+      toast({
+        variant: "destructive",
+        title: "Pro Feature",
+        description: "Weight tracking is a Pro feature. Please upgrade to continue.",
+      });
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from("weight_records")
@@ -203,165 +243,185 @@ export const WeightTracker = () => {
     }
   }, [latestWeight, height]);
 
+  if (!isPro) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Weight Tracker</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="py-8 text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900">
+              <Lock className="h-6 w-6 text-yellow-600 dark:text-yellow-300" />
+            </div>
+            <h3 className="mb-2 text-lg font-semibold">Pro Feature</h3>
+            <p className="mb-4 text-muted-foreground">
+              Weight tracking is available exclusively for Pro subscribers.
+              Upgrade to Pro to track your weight, calculate BMI, and visualize your progress over time.
+            </p>
+            <Button asChild>
+              <Link to="/?tab=subscription">
+                <CreditCard className="mr-2 h-4 w-4" />
+                Upgrade to Pro
+              </Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Weight Tracker</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {loading ? (
-          <div className="h-64 flex items-center justify-center">
-            <p>Loading your weight data...</p>
-          </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="weight">Current Weight (kg)</Label>
-                    <div className="flex space-x-2">
-                      <Input
-                        id="weight"
-                        type="number"
-                        placeholder="Enter weight in kg"
-                        value={newWeight}
-                        onChange={(e) => setNewWeight(e.target.value)}
-                      />
-                      <Button onClick={handleAddWeight}>Save</Button>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Your height can be updated in the settings page
-                    </p>
-                  </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="weight">Current Weight (kg)</Label>
+                <div className="flex space-x-2">
+                  <Input
+                    id="weight"
+                    type="number"
+                    placeholder="Enter weight in kg"
+                    value={newWeight}
+                    onChange={(e) => setNewWeight(e.target.value)}
+                  />
+                  <Button onClick={handleAddWeight}>Save</Button>
                 </div>
-
-                {(height && latestWeight) && (
-                  <div className="mt-4 p-4 border rounded-md bg-slate-50 dark:bg-slate-800">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h3 className="font-semibold">Your BMI</h3>
-                        <div className="flex items-baseline space-x-2">
-                          <span className="text-3xl font-bold" style={{ color: bmi ? getBmiCategoryColor(bmi) : "inherit" }}>
-                            {bmi?.toFixed(1) || "N/A"}
-                          </span>
-                          <span className="text-sm text-muted-foreground">kg/m²</span>
-                        </div>
-                        {bmi && (
-                          <p className="text-sm font-medium" style={{ color: getBmiCategoryColor(bmi) }}>
-                            {getBmiCategory(bmi)}
-                          </p>
-                        )}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        <div>Underweight: &lt;18.5</div>
-                        <div>Normal: 18.5-24.9</div>
-                        <div>Overweight: 25-29.9</div>
-                        <div>Obese: ≥30</div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="h-64">
-                {chartData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis 
-                        dataKey="date" 
-                        tickFormatter={(date) => format(parseISO(date), 'MMM d')}
-                      />
-                      <YAxis domain={['dataMin - 5', 'dataMax + 5']} />
-                      <Tooltip 
-                        labelFormatter={(date) => format(parseISO(date as string), 'MMM d, yyyy')}
-                        formatter={(value) => [`${value} kg`, 'Weight']}
-                      />
-                      <Legend />
-                      <Line 
-                        type="monotone" 
-                        dataKey="weight" 
-                        stroke="#8884d8" 
-                        activeDot={{ r: 8 }} 
-                      />
-                      
-                      {height && (
-                        <>
-                          {underweightThreshold && (
-                            <ReferenceLine 
-                              y={underweightThreshold} 
-                              stroke="#3b82f6" 
-                              strokeDasharray="3 3" 
-                              label={{ value: "Underweight", position: "insideTopLeft", fill: "#3b82f6" }} 
-                            />
-                          )}
-                          {overweightThreshold && (
-                            <ReferenceLine 
-                              y={overweightThreshold} 
-                              stroke="#f59e0b" 
-                              strokeDasharray="3 3" 
-                              label={{ value: "Overweight", position: "insideTopLeft", fill: "#f59e0b" }} 
-                            />
-                          )}
-                        </>
-                      )}
-                    </LineChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-full flex items-center justify-center text-center">
-                    <div className="text-muted-foreground">
-                      <p>No weight data recorded yet.</p>
-                      <p className="text-sm">Add your weight to see the chart.</p>
-                      {height && (
-                        <p className="mt-4 text-sm">
-                          <span className="block font-medium">BMI Reference:</span>
-                          {underweightThreshold && <span className="block text-blue-500">Underweight: Below {underweightThreshold} kg</span>}
-                          {underweightThreshold && overweightThreshold && <span className="block text-green-600">Normal: {underweightThreshold}-{overweightThreshold} kg</span>}
-                          {overweightThreshold && <span className="block text-amber-500">Overweight: Above {overweightThreshold} kg</span>}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
+                <p className="text-sm text-muted-foreground">
+                  Your height can be updated in the settings page
+                </p>
               </div>
             </div>
 
-            {weightRecords.length > 0 && (
-              <div className="mt-6">
-                <h3 className="font-medium mb-2">Weight History</h3>
-                <div className="max-h-40 overflow-y-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="text-left">
-                        <th className="pb-2">Date</th>
-                        <th className="pb-2">Weight (kg)</th>
-                        <th className="pb-2">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[...weightRecords].reverse().map((record) => (
-                        <tr key={record.id} className="border-t">
-                          <td className="py-2">{format(parseISO(record.date), 'PP')}</td>
-                          <td className="py-2">{record.weight} kg</td>
-                          <td className="py-2">
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              onClick={() => handleDeleteWeight(record.id)}
-                              title="Delete weight record"
-                            >
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+            {(height && latestWeight) && (
+              <div className="mt-4 p-4 border rounded-md bg-slate-50 dark:bg-slate-800">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="font-semibold">Your BMI</h3>
+                    <div className="flex items-baseline space-x-2">
+                      <span className="text-3xl font-bold" style={{ color: bmi ? getBmiCategoryColor(bmi) : "inherit" }}>
+                        {bmi?.toFixed(1) || "N/A"}
+                      </span>
+                      <span className="text-sm text-muted-foreground">kg/m²</span>
+                    </div>
+                    {bmi && (
+                      <p className="text-sm font-medium" style={{ color: getBmiCategoryColor(bmi) }}>
+                        {getBmiCategory(bmi)}
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    <div>Underweight: &lt;18.5</div>
+                    <div>Normal: 18.5-24.9</div>
+                    <div>Overweight: 25-29.9</div>
+                    <div>Obese: ≥30</div>
+                  </div>
                 </div>
               </div>
             )}
-          </>
+          </div>
+
+          <div className="h-64">
+            {chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="date" 
+                    tickFormatter={(date) => format(parseISO(date), 'MMM d')}
+                  />
+                  <YAxis domain={['dataMin - 5', 'dataMax + 5']} />
+                  <Tooltip 
+                    labelFormatter={(date) => format(parseISO(date as string), 'MMM d, yyyy')}
+                    formatter={(value) => [`${value} kg`, 'Weight']}
+                  />
+                  <Legend />
+                  <Line 
+                    type="monotone" 
+                    dataKey="weight" 
+                    stroke="#8884d8" 
+                    activeDot={{ r: 8 }} 
+                  />
+                  
+                  {height && (
+                    <>
+                      {underweightThreshold && (
+                        <ReferenceLine 
+                          y={underweightThreshold} 
+                          stroke="#3b82f6" 
+                          strokeDasharray="3 3" 
+                          label={{ value: "Underweight", position: "insideTopLeft", fill: "#3b82f6" }} 
+                        />
+                      )}
+                      {overweightThreshold && (
+                        <ReferenceLine 
+                          y={overweightThreshold} 
+                          stroke="#f59e0b" 
+                          strokeDasharray="3 3" 
+                          label={{ value: "Overweight", position: "insideTopLeft", fill: "#f59e0b" }} 
+                        />
+                      )}
+                    </>
+                  )}
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-center">
+                <div className="text-muted-foreground">
+                  <p>No weight data recorded yet.</p>
+                  <p className="text-sm">Add your weight to see the chart.</p>
+                  {height && (
+                    <p className="mt-4 text-sm">
+                      <span className="block font-medium">BMI Reference:</span>
+                      {underweightThreshold && <span className="block text-blue-500">Underweight: Below {underweightThreshold} kg</span>}
+                      {underweightThreshold && overweightThreshold && <span className="block text-green-600">Normal: {underweightThreshold}-{overweightThreshold} kg</span>}
+                      {overweightThreshold && <span className="block text-amber-500">Overweight: Above {overweightThreshold} kg</span>}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {weightRecords.length > 0 && (
+          <div className="mt-6">
+            <h3 className="font-medium mb-2">Weight History</h3>
+            <div className="max-h-40 overflow-y-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="text-left">
+                    <th className="pb-2">Date</th>
+                    <th className="pb-2">Weight (kg)</th>
+                    <th className="pb-2">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...weightRecords].reverse().map((record) => (
+                    <tr key={record.id} className="border-t">
+                      <td className="py-2">{format(parseISO(record.date), 'PP')}</td>
+                      <td className="py-2">{record.weight} kg</td>
+                      <td className="py-2">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => handleDeleteWeight(record.id)}
+                          title="Delete weight record"
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         )}
       </CardContent>
     </Card>

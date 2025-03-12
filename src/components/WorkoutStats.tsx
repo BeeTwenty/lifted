@@ -1,11 +1,14 @@
 
 import { Card } from "@/components/ui/card";
-import { Activity, Timer, Flame, Calendar } from "lucide-react";
+import { Activity, Timer, Flame, Calendar, Lock, CreditCard } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 import { startOfWeek } from "date-fns";
 import { calculateCurrentStreak, calculateWeeklyStreak } from "@/lib/export-utils";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 type CompletedWorkout = {
   id: string;
@@ -15,6 +18,31 @@ type CompletedWorkout = {
 };
 
 export function WorkoutStats() {
+  const [isPro, setIsPro] = useState(false);
+
+  useEffect(() => {
+    checkProStatus();
+  }, []);
+
+  const checkProStatus = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("status")
+        .eq("id", user.id)
+        .single();
+
+      if (error) throw error;
+      
+      setIsPro(data?.status === "pro");
+    } catch (error: any) {
+      console.error("Error checking pro status:", error.message);
+    }
+  };
+
   // Fetch user profile and workout stats
   const { data: userStats } = useQuery({
     queryKey: ["workoutStats"],
@@ -79,6 +107,30 @@ export function WorkoutStats() {
 
   const hourProgress = Math.min(((userStats?.totalHours || 0) / hourGoal) * 100, 100);
   const hoursRemaining = Math.max(hourGoal - (userStats?.totalHours || 0), 0);
+
+  // If not pro, show pro upgrade message
+  if (!isPro) {
+    return (
+      <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
+        <div className="py-8 text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900">
+            <Lock className="h-6 w-6 text-yellow-600 dark:text-yellow-300" />
+          </div>
+          <h3 className="mb-2 text-lg font-semibold">Pro Feature</h3>
+          <p className="mb-4 text-muted-foreground">
+            Detailed workout statistics are available exclusively for Pro subscribers.
+            Upgrade to Pro to track your workout progress, streaks, and achievements.
+          </p>
+          <Button asChild>
+            <Link to="/?tab=subscription">
+              <CreditCard className="mr-2 h-4 w-4" />
+              Upgrade to Pro
+            </Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
