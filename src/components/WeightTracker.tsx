@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine, ResponsiveContainer } from "recharts";
@@ -22,8 +23,6 @@ export const WeightTracker = () => {
 
   useEffect(() => {
     checkProStatus();
-    fetchWeightRecords();
-    fetchUserProfile();
   }, []);
 
   const checkProStatus = async () => {
@@ -40,8 +39,17 @@ export const WeightTracker = () => {
       if (error) throw error;
       
       setIsPro(data?.status === "pro");
+      
+      // Only fetch weight records if user is pro
+      if (data?.status === "pro") {
+        fetchWeightRecords();
+        fetchUserProfile();
+      } else {
+        setLoading(false);
+      }
     } catch (error: any) {
       console.error("Error checking pro status:", error.message);
+      setLoading(false);
     }
   };
 

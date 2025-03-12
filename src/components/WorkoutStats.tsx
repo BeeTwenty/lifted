@@ -97,6 +97,7 @@ export function WorkoutStats() {
         weeklyStreak
       };
     },
+    enabled: isPro, // Only fetch data if user is Pro
   });
 
   const workoutGoal = userStats?.workoutGoal || 5;
