@@ -41,7 +41,7 @@ const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
       "Priority support",
     ],
     stripeProductId: "prod_RvnBPKw0MzYleJ",
-    stripePriceId: "price_1OpWuF2eZvKYlo2CfHW0fY3d",
+    stripePriceId: "price_1RtvbRP6wHqHwKkzuGnmkQQk",
   }
 ];
 
@@ -94,6 +94,11 @@ export function SubscriptionManager() {
       console.log("Creating checkout session for price:", plan.stripePriceId);
       console.log("Success URL:", window.location.origin);
       console.log("Cancel URL:", window.location.origin);
+      
+      // Make sure we have a valid price ID
+      if (!plan.stripePriceId) {
+        throw new Error("No price ID available for this plan");
+      }
       
       // Properly format the request body
       const requestBody = {

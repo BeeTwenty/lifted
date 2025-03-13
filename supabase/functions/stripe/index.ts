@@ -66,6 +66,7 @@ serve(async (req) => {
     
     try {
       if (req.body) {
+        const bodyClone = req.clone().body;
         const bodyText = await req.text();
         console.log('Raw request body:', bodyText);
         
@@ -81,9 +82,11 @@ serve(async (req) => {
           console.log('Empty request body');
           // For empty body, use an empty object
           requestData = {};
+          throw new Error('Request body is empty');
         }
       } else {
         console.log('No request body');
+        throw new Error('Request body is missing');
       }
     } catch (e) {
       console.error('Error processing request body:', e);
@@ -124,7 +127,7 @@ async function handleCreateCheckoutSession(userId, data, supabase, req) {
   console.log('Request data for checkout:', JSON.stringify(data));
   
   if (!data || !data.priceId) {
-    console.error('Missing priceId in request data');
+    console.error('Missing priceId in request data:', data);
     throw new Error('Price ID is required');
   }
 
