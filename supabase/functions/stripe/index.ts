@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import Stripe from 'https://esm.sh/stripe@12.0.0?target=deno';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
@@ -57,16 +56,18 @@ serve(async (req) => {
     const userId = user.id;
     console.log('Authenticated user:', userId);
 
-    // Check for content-type header
-    const contentType = req.headers.get('Content-Type');
-    console.log('Content-Type header:', contentType);
-
     // Extract request data
-    let requestData = {};
+    let requestData;
+    
+    // Create a copy of the request before reading the body
+    const reqClone = req.clone();
     
     try {
-      if (req.body) {
-        const bodyClone = req.clone().body;
+      const contentType = req.headers.get('Content-Type') || '';
+      console.log('Content-Type header:', contentType);
+      
+      if (contentType.includes('application/json')) {
+        // Parse JSON body
         const bodyText = await req.text();
         console.log('Raw request body:', bodyText);
         
@@ -79,28 +80,39 @@ serve(async (req) => {
             throw new Error(`Failed to parse request body as JSON: ${parseError.message}`);
           }
         } else {
-          console.log('Empty request body');
-          // For empty body, use an empty object
-          requestData = {};
+          console.error('Empty JSON body');
           throw new Error('Request body is empty');
         }
       } else {
-        console.log('No request body');
-        throw new Error('Request body is missing');
+        // For non-JSON content types, try to parse as form data
+        const formData = await req.formData();
+        requestData = Object.fromEntries(formData.entries());
+        console.log('Parsed form data:', JSON.stringify(requestData));
+      }
+      
+      // If we get here and still don't have request data, it's an issue
+      if (!requestData) {
+        throw new Error('No request data could be extracted');
       }
     } catch (e) {
       console.error('Error processing request body:', e);
-      throw new Error('Invalid request body: ' + e.message);
+      return new Response(
+        JSON.stringify({ error: `Invalid request body: ${e.message}` }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
     }
 
     // Handle different endpoints
     let result;
     switch (endpoint) {
       case 'create-checkout-session':
-        result = await handleCreateCheckoutSession(userId, requestData, supabaseAdmin, req);
+        result = await handleCreateCheckoutSession(userId, requestData, supabaseAdmin, reqClone);
         break;
       case 'customer-portal':
-        result = await handleCustomerPortal(userId, supabaseAdmin, req);
+        result = await handleCustomerPortal(userId, requestData, supabaseAdmin, reqClone);
         break;
       default:
         throw new Error('Invalid endpoint');
@@ -149,7 +161,7 @@ async function handleCreateCheckoutSession(userId, data, supabase, req) {
   let stripeCustomerId;
   
   // Check if customer exists in payments table
-  const { data: paymentData } = await supabase
+  const { data: paymentData, error: paymentError } = await supabase
     .from('payments')
     .select('stripe_customer_id')
     .eq('user_id', userId)
@@ -213,8 +225,9 @@ async function handleCreateCheckoutSession(userId, data, supabase, req) {
   }
 }
 
-async function handleCustomerPortal(userId, supabase, req) {
+async function handleCustomerPortal(userId, data, supabase, req) {
   console.log(`Creating customer portal session for user ${userId}`);
+  console.log('Request data for customer portal:', JSON.stringify(data));
   
   // Get the customer ID from the payments table
   const { data: paymentData, error: paymentError } = await supabase
@@ -237,7 +250,7 @@ async function handleCustomerPortal(userId, supabase, req) {
   const stripeCustomerId = paymentData[0].stripe_customer_id;
   console.log('Using customer portal for:', stripeCustomerId);
 
-  const returnUrl = `${new URL(req.url).origin}`;
+  const returnUrl = data.returnUrl || `${new URL(req.url).origin}`;
   console.log('Return URL:', returnUrl);
   
   // Create a billing portal session

@@ -100,7 +100,7 @@ export function SubscriptionManager() {
         throw new Error("No price ID available for this plan");
       }
       
-      // Properly format the request body
+      // Create the request body as a proper JSON object
       const requestBody = {
         priceId: plan.stripePriceId,
         successUrl: window.location.origin,
@@ -109,14 +109,14 @@ export function SubscriptionManager() {
       
       console.log("Request body:", JSON.stringify(requestBody));
       
-      // Use invoke method to call the Stripe edge function
+      // Call the Stripe edge function with the proper body format
       const { data, error } = await supabase.functions.invoke("stripe/create-checkout-session", {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${sessionAuth.session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: requestBody, // Send properly formatted object
+        body: requestBody, // Pass the object directly
       });
       
       if (error) {
@@ -152,14 +152,19 @@ export function SubscriptionManager() {
       const { data: sessionAuth } = await supabase.auth.getSession();
       if (!sessionAuth.session) throw new Error("No active session");
 
-      // Use invoke method to call the Stripe edge function with proper body format
+      // Create a proper body object for the customer portal request
+      const requestBody = {
+        returnUrl: window.location.origin
+      };
+      
+      // Use invoke method with a properly formatted body
       const { data, error } = await supabase.functions.invoke("stripe/customer-portal", {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${sessionAuth.session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: {}, // Send empty object instead of undefined
+        body: requestBody,
       });
       
       if (error) {
