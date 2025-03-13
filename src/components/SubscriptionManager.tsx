@@ -30,8 +30,8 @@ const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     id: "pro",
     name: "Pro",
     description: "Enhanced features for serious athletes",
-    price: 9.99,
-    currency: "USD",
+    price: 15.00,
+    currency: "NOK",
     interval: "month",
     features: [
       "All Basic features",
@@ -40,8 +40,8 @@ const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
       "Progress analytics",
       "Priority support",
     ],
-    stripeProductId: "prod_OxUybzWnHGvzQV",
-    stripePriceId: "price_1OxUzaP6wHqHwKkzFn9zQrUb",
+    stripeProductId: "prod_RvnBPKw0MzYleJ",
+    stripePriceId: "price_1OpWuF2eZvKYlo2CfHW0fY3d",
   }
 ];
 
@@ -50,6 +50,7 @@ export function SubscriptionManager() {
   const [loading, setLoading] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [manageLoading, setManageLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -85,16 +86,19 @@ export function SubscriptionManager() {
   const handleCheckout = async (plan: SubscriptionPlan) => {
   try {
     setCheckoutLoading(true);
+    setCheckoutError(null);
     
     const { data: sessionAuth } = await supabase.auth.getSession();
     if (!sessionAuth.session) throw new Error("No active session");
 
+    console.log("Creating checkout session for price:", plan.stripePriceId);
+    
     // Use invoke method to call the Stripe edge function
     const { data, error } = await supabase.functions.invoke("stripe/create-checkout-session", {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${sessionAuth.session.access_token}`,
-        'Content-Type': 'application/json', // Ensure content type is set
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         priceId: plan.stripePriceId,
@@ -104,17 +108,21 @@ export function SubscriptionManager() {
     });
     
     if (error) {
+      console.error("Stripe function error:", error);
       throw new Error(error.message);
     }
 
     if (!data || !data.url) {
+      console.error("Invalid response from server:", data);
       throw new Error("Invalid response from server");
     }
 
+    console.log("Redirecting to checkout URL:", data.url);
     // Redirect to Stripe checkout
     window.location.href = data.url;
   } catch (error: any) {
     console.error("Error creating checkout session:", error);
+    setCheckoutError(error.message);
     toast({
       variant: "destructive",
       title: "Checkout Error",
@@ -218,6 +226,18 @@ export function SubscriptionManager() {
             )}
           </div>
 
+          {checkoutError && (
+            <div className="rounded-md bg-destructive/15 p-4">
+              <div className="flex">
+                <AlertTriangle className="h-5 w-5 text-destructive mr-2" />
+                <div>
+                  <h3 className="text-sm font-medium text-destructive">Checkout Error</h3>
+                  <p className="mt-1 text-sm text-destructive/90">{checkoutError}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <Separator />
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -234,7 +254,7 @@ export function SubscriptionManager() {
                 </CardHeader>
                 <CardContent>
                   <div className="mb-4">
-                    <span className="text-3xl font-bold">${plan.price}</span>
+                    <span className="text-3xl font-bold">{plan.price > 0 ? `${plan.price} ${plan.currency}` : "$0"}</span>
                     {plan.price > 0 && (
                       <span className="text-muted-foreground">/{plan.interval}</span>
                     )}
