@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -84,54 +83,54 @@ export function SubscriptionManager() {
   };
 
   const handleCheckout = async (plan: SubscriptionPlan) => {
-  try {
-    setCheckoutLoading(true);
-    setCheckoutError(null);
-    
-    const { data: sessionAuth } = await supabase.auth.getSession();
-    if (!sessionAuth.session) throw new Error("No active session");
+    try {
+      setCheckoutLoading(true);
+      setCheckoutError(null);
+      
+      const { data: sessionAuth } = await supabase.auth.getSession();
+      if (!sessionAuth.session) throw new Error("No active session");
 
-    console.log("Creating checkout session for price:", plan.stripePriceId);
-    
-    // Use invoke method to call the Stripe edge function
-    const { data, error } = await supabase.functions.invoke("stripe/create-checkout-session", {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${sessionAuth.session.access_token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        priceId: plan.stripePriceId,
-        successUrl: window.location.origin,
-        cancelUrl: window.location.origin,
-      }),
-    });
-    
-    if (error) {
-      console.error("Stripe function error:", error);
-      throw new Error(error.message);
+      console.log("Creating checkout session for price:", plan.stripePriceId);
+      
+      // Use invoke method to call the Stripe edge function
+      const { data, error } = await supabase.functions.invoke("stripe/create-checkout-session", {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${sessionAuth.session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: {
+          priceId: plan.stripePriceId,
+          successUrl: window.location.origin,
+          cancelUrl: window.location.origin,
+        },
+      });
+      
+      if (error) {
+        console.error("Stripe function error:", error);
+        throw new Error(error.message || "Error creating checkout session");
+      }
+
+      if (!data || !data.url) {
+        console.error("Invalid response from server:", data);
+        throw new Error("Invalid response from server");
+      }
+
+      console.log("Redirecting to checkout URL:", data.url);
+      // Redirect to Stripe checkout
+      window.location.href = data.url;
+    } catch (error: any) {
+      console.error("Error creating checkout session:", error);
+      setCheckoutError(error.message);
+      toast({
+        variant: "destructive",
+        title: "Checkout Error",
+        description: error.message,
+      });
+    } finally {
+      setCheckoutLoading(false);
     }
-
-    if (!data || !data.url) {
-      console.error("Invalid response from server:", data);
-      throw new Error("Invalid response from server");
-    }
-
-    console.log("Redirecting to checkout URL:", data.url);
-    // Redirect to Stripe checkout
-    window.location.href = data.url;
-  } catch (error: any) {
-    console.error("Error creating checkout session:", error);
-    setCheckoutError(error.message);
-    toast({
-      variant: "destructive",
-      title: "Checkout Error",
-      description: error.message,
-    });
-  } finally {
-    setCheckoutLoading(false);
-  }
-};
+  };
 
   const handleManageSubscription = async () => {
     try {

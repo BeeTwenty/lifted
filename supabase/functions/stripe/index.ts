@@ -16,8 +16,11 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log(`Request received: ${req.method} ${req.url}`);
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('Handling CORS preflight request');
     return new Response(null, { headers: corsHeaders });
   }
 
@@ -56,10 +59,16 @@ serve(async (req) => {
     // Extract request data
     let requestData = {};
     try {
-      requestData = await req.json();
-      console.log('Request data:', JSON.stringify(requestData));
+      if (req.body) {
+        requestData = await req.json();
+        console.log('Request data:', JSON.stringify(requestData));
+      } else {
+        console.log('No request body');
+        throw new Error('Request body is required');
+      }
     } catch (e) {
-      console.log('No request body or invalid JSON');
+      console.error('Error parsing request body:', e);
+      throw new Error('Invalid request body: ' + e.message);
     }
 
     // Handle different endpoints
@@ -69,7 +78,7 @@ serve(async (req) => {
         result = await handleCreateCheckoutSession(userId, requestData, supabaseAdmin);
         break;
       case 'customer-portal':
-        result = await handleCustomerPortal(userId, supabaseAdmin);
+        result = await handleCustomerPortal(userId, supabaseAdmin, req);
         break;
       default:
         throw new Error('Invalid endpoint');
@@ -92,11 +101,14 @@ serve(async (req) => {
 });
 
 async function handleCreateCheckoutSession(userId, data, supabase) {
-  console.log(`Creating checkout session for user ${userId} with price ${data.priceId}`);
+  console.log(`Creating checkout session for user ${userId}`);
   
-  if (!data.priceId) {
+  if (!data || !data.priceId) {
+    console.error('Missing priceId in request data');
     throw new Error('Price ID is required');
   }
+
+  console.log(`Using priceId: ${data.priceId}`);
 
   // Check if user already has a Stripe customer ID
   const { data: profile, error: profileError } = await supabase
@@ -128,10 +140,15 @@ async function handleCreateCheckoutSession(userId, data, supabase) {
   } else {
     // Create a new customer
     const { data: userData } = await supabase.auth.admin.getUserById(userId);
-    console.log('Creating new Stripe customer for email:', userData.user?.email);
+    if (!userData || !userData.user || !userData.user.email) {
+      console.error('Unable to get user email');
+      throw new Error('Unable to get user email');
+    }
+    
+    console.log('Creating new Stripe customer for email:', userData.user.email);
     
     const customer = await stripe.customers.create({
-      email: userData.user?.email,
+      email: userData.user.email,
       metadata: {
         supabase_id: userId,
       },
@@ -168,7 +185,7 @@ async function handleCreateCheckoutSession(userId, data, supabase) {
   return { url: session.url };
 }
 
-async function handleCustomerPortal(userId, supabase) {
+async function handleCustomerPortal(userId, supabase, req) {
   console.log(`Creating customer portal session for user ${userId}`);
   
   // Get the customer ID from the payments table
@@ -192,10 +209,13 @@ async function handleCustomerPortal(userId, supabase) {
   const stripeCustomerId = paymentData[0].stripe_customer_id;
   console.log('Using customer portal for:', stripeCustomerId);
 
+  const returnUrl = `${new URL(req.url).origin}`;
+  console.log('Return URL:', returnUrl);
+  
   // Create a billing portal session
   const session = await stripe.billingPortal.sessions.create({
     customer: stripeCustomerId,
-    return_url: `${new URL(req.url).origin}`,
+    return_url: returnUrl,
   });
 
   console.log('Created customer portal session:', session.url);
