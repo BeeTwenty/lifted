@@ -17,6 +17,7 @@ const corsHeaders = {
 
 serve(async (req) => {
   console.log(`Request received: ${req.method} ${req.url}`);
+  console.log('Request headers:', JSON.stringify(Object.fromEntries(req.headers.entries())));
   
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -56,18 +57,36 @@ serve(async (req) => {
     const userId = user.id;
     console.log('Authenticated user:', userId);
 
+    // Check for content-type header
+    const contentType = req.headers.get('Content-Type');
+    console.log('Content-Type header:', contentType);
+
     // Extract request data
     let requestData = {};
+    
     try {
       if (req.body) {
-        requestData = await req.json();
-        console.log('Request data:', JSON.stringify(requestData));
+        const bodyText = await req.text();
+        console.log('Raw request body:', bodyText);
+        
+        if (bodyText && bodyText.trim() !== '') {
+          try {
+            requestData = JSON.parse(bodyText);
+            console.log('Parsed request data:', JSON.stringify(requestData));
+          } catch (parseError) {
+            console.error('JSON parse error:', parseError);
+            throw new Error(`Failed to parse request body as JSON: ${parseError.message}`);
+          }
+        } else {
+          console.log('Empty request body');
+          // For empty body, use an empty object
+          requestData = {};
+        }
       } else {
         console.log('No request body');
-        throw new Error('Request body is required');
       }
     } catch (e) {
-      console.error('Error parsing request body:', e);
+      console.error('Error processing request body:', e);
       throw new Error('Invalid request body: ' + e.message);
     }
 
@@ -75,7 +94,7 @@ serve(async (req) => {
     let result;
     switch (endpoint) {
       case 'create-checkout-session':
-        result = await handleCreateCheckoutSession(userId, requestData, supabaseAdmin);
+        result = await handleCreateCheckoutSession(userId, requestData, supabaseAdmin, req);
         break;
       case 'customer-portal':
         result = await handleCustomerPortal(userId, supabaseAdmin, req);
@@ -100,8 +119,9 @@ serve(async (req) => {
   }
 });
 
-async function handleCreateCheckoutSession(userId, data, supabase) {
+async function handleCreateCheckoutSession(userId, data, supabase, req) {
   console.log(`Creating checkout session for user ${userId}`);
+  console.log('Request data for checkout:', JSON.stringify(data));
   
   if (!data || !data.priceId) {
     console.error('Missing priceId in request data');
@@ -158,31 +178,36 @@ async function handleCreateCheckoutSession(userId, data, supabase) {
   }
 
   // Create the checkout session
-  const successUrl = data.successUrl || `${new URL(req.url).origin}`;
-  const cancelUrl = data.cancelUrl || `${new URL(req.url).origin}`;
+  const successUrl = data.successUrl || new URL(req.url).origin;
+  const cancelUrl = data.cancelUrl || new URL(req.url).origin;
   
   console.log(`Success URL: ${successUrl}, Cancel URL: ${cancelUrl}`);
 
-  const session = await stripe.checkout.sessions.create({
-    customer: stripeCustomerId,
-    line_items: [
-      {
-        price: data.priceId,
-        quantity: 1,
+  try {
+    const session = await stripe.checkout.sessions.create({
+      customer: stripeCustomerId,
+      line_items: [
+        {
+          price: data.priceId,
+          quantity: 1,
+        },
+      ],
+      mode: 'subscription',
+      success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${cancelUrl}`,
+      metadata: {
+        user_id: userId,
       },
-    ],
-    mode: 'subscription',
-    success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${cancelUrl}`,
-    metadata: {
-      user_id: userId,
-    },
-  });
+    });
 
-  console.log('Created checkout session:', session.id);
-  console.log('Checkout URL:', session.url);
-  
-  return { url: session.url };
+    console.log('Created checkout session:', session.id);
+    console.log('Checkout URL:', session.url);
+    
+    return { url: session.url };
+  } catch (stripeError) {
+    console.error('Stripe checkout session creation error:', stripeError);
+    throw new Error(`Stripe error: ${stripeError.message}`);
+  }
 }
 
 async function handleCustomerPortal(userId, supabase, req) {

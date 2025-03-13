@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -91,6 +92,17 @@ export function SubscriptionManager() {
       if (!sessionAuth.session) throw new Error("No active session");
 
       console.log("Creating checkout session for price:", plan.stripePriceId);
+      console.log("Success URL:", window.location.origin);
+      console.log("Cancel URL:", window.location.origin);
+      
+      // Properly format the request body
+      const requestBody = {
+        priceId: plan.stripePriceId,
+        successUrl: window.location.origin,
+        cancelUrl: window.location.origin,
+      };
+      
+      console.log("Request body:", JSON.stringify(requestBody));
       
       // Use invoke method to call the Stripe edge function
       const { data, error } = await supabase.functions.invoke("stripe/create-checkout-session", {
@@ -99,11 +111,7 @@ export function SubscriptionManager() {
           Authorization: `Bearer ${sessionAuth.session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: {
-          priceId: plan.stripePriceId,
-          successUrl: window.location.origin,
-          cancelUrl: window.location.origin,
-        },
+        body: requestBody, // Send properly formatted object
       });
       
       if (error) {
@@ -139,13 +147,14 @@ export function SubscriptionManager() {
       const { data: sessionAuth } = await supabase.auth.getSession();
       if (!sessionAuth.session) throw new Error("No active session");
 
-      // Use invoke method to call the Stripe edge function
+      // Use invoke method to call the Stripe edge function with proper body format
       const { data, error } = await supabase.functions.invoke("stripe/customer-portal", {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${sessionAuth.session.access_token}`,
+          'Content-Type': 'application/json',
         },
-        body: {},
+        body: {}, // Send empty object instead of undefined
       });
       
       if (error) {
