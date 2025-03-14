@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -5,6 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CreditCard, CheckCircle, XCircle, Shield, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { api } from "@/api/config";
 
 export const SubscriptionManager = () => {
   const { toast } = useToast();
@@ -46,7 +48,7 @@ export const SubscriptionManager = () => {
       // Get the current URL for success and cancel URLs
       const baseUrl = window.location.origin;
       
-      // Correct price ID from your message
+      // Use the correct price ID
       const priceId = "price_1R1vbRP6wHqHwKkzuGnmkQQk";
       
       // Prepare the request payload
@@ -66,9 +68,9 @@ export const SubscriptionManager = () => {
         throw new Error("You must be logged in to subscribe");
       }
       
-      // Call the Stripe function
+      // Use the baseUrl from the api config instead of directly accessing supabaseUrl
       const response = await fetch(
-        `${supabase.supabaseUrl}/functions/v1/stripe`,
+        `${api.baseUrl}/functions/v1/stripe`,
         {
           method: 'POST',
           headers: {
@@ -128,9 +130,9 @@ export const SubscriptionManager = () => {
       // Get the current user's session
       const { data: { session } } = await supabase.auth.getSession();
       
-      // Call the Stripe customer portal endpoint
+      // Use the baseUrl from the api config instead of directly accessing supabaseUrl
       const response = await fetch(
-        `${supabase.supabaseUrl}/functions/v1/stripe`,
+        `${api.baseUrl}/functions/v1/stripe`,
         {
           method: 'POST',
           headers: {
@@ -356,3 +358,4 @@ export const SubscriptionManager = () => {
     </div>
   );
 };
+
