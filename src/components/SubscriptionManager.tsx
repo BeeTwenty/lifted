@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Shield, Check, Gem, AlertTriangle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { UserProfile, SubscriptionPlan } from "@/types/workout";
+import { api } from "@/api/config";
 
 const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   {
@@ -110,30 +111,16 @@ export function SubscriptionManager() {
       
       console.log("Request body for Stripe function:", requestBody);
 
-      // Use the current origin for the API endpoint instead of hardcoded domain
-      const functionUrl = `${currentUrl}/functions/v1/stripe`;
-      
-      console.log("Sending request to:", functionUrl);
-      
-      // Use Fetch API directly for more control over the request
-      const response = await fetch(functionUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-          // Get the Supabase API key from import.meta.env instead of process.env
-          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || "",
-        },
+      // Use Supabase functions.invoke instead of direct fetch
+      const { data, error } = await supabase.functions.invoke('stripe', {
         body: JSON.stringify(requestBody)
       });
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Error response from Stripe function:", response.status, errorText);
-        throw new Error(`Error ${response.status}: ${errorText || "Unknown error"}`);
+      if (error) {
+        console.error("Error response from Stripe function:", error);
+        throw new Error(`Error: ${error.message || "Unknown error"}`);
       }
       
-      const data = await response.json();
       console.log("Response from Stripe function:", data);
       
       if (!data || !data.url) {
@@ -175,30 +162,16 @@ export function SubscriptionManager() {
       
       console.log("Request body for customer portal:", requestBody);
       
-      // Use the current origin for the API endpoint instead of hardcoded domain
-      const functionUrl = `${currentUrl}/functions/v1/stripe`;
-      
-      console.log("Sending request to:", functionUrl);
-      
-      // Use Fetch API directly for more control over the request
-      const response = await fetch(functionUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-          // Get the Supabase API key from import.meta.env instead of process.env
-          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || "",
-        },
+      // Use Supabase functions.invoke instead of direct fetch
+      const { data, error } = await supabase.functions.invoke('stripe', {
         body: JSON.stringify(requestBody)
       });
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Error response from Stripe function:", response.status, errorText);
-        throw new Error(`Error ${response.status}: ${errorText || "Unknown error"}`);
+      if (error) {
+        console.error("Error response from customer portal:", error);
+        throw new Error(`Error: ${error.message || "Unknown error"}`);
       }
       
-      const data = await response.json();
       console.log("Response from customer portal:", data);
       
       if (!data || !data.url) {
