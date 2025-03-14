@@ -9,6 +9,7 @@ import { calculateCurrentStreak, calculateWeeklyStreak } from "@/lib/export-util
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/components/AuthProvider";
+import { useEffect } from "react";
 
 type CompletedWorkout = {
   id: string;
@@ -19,6 +20,11 @@ type CompletedWorkout = {
 
 export function WorkoutStats() {
   const { isProSubscriber } = useAuth();
+  
+  // Log Pro status for debugging
+  useEffect(() => {
+    console.log("WorkoutStats - Is Pro Subscriber:", isProSubscriber);
+  }, [isProSubscriber]);
 
   // Fetch user profile and workout stats
   const { data: userStats, isLoading } = useQuery({
@@ -77,8 +83,11 @@ export function WorkoutStats() {
     enabled: true, // Always fetch data regardless of Pro status
   });
 
+  console.log("Rendering WorkoutStats with Pro status:", isProSubscriber);
+
   // If not a pro subscriber, show the upgrade message
   if (!isProSubscriber) {
+    console.log("User is not Pro, showing upgrade message");
     return (
       <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
         <div className="py-8 text-center">
@@ -102,6 +111,7 @@ export function WorkoutStats() {
   }
 
   if (isLoading) {
+    console.log("Stats data is loading");
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
@@ -109,6 +119,8 @@ export function WorkoutStats() {
     );
   }
 
+  console.log("User is Pro, showing stats data:", userStats);
+  
   const workoutGoal = userStats?.workoutGoal || 5;
   const hourGoal = userStats?.hourGoal || 10;
   

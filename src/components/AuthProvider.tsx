@@ -31,8 +31,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     try {
       const status = await profileService.checkSubscriptionStatus();
-      setIsProSubscriber(status === "pro");
-      console.log("Pro status:", status === "pro" ? "Pro" : "Basic");
+      console.log("Subscription status from API:", status);
+      const isPro = status === "pro";
+      setIsProSubscriber(isPro);
+      console.log("Pro status set to:", isPro ? "Pro" : "Basic");
     } catch (error) {
       console.error("Error checking pro status:", error);
       setIsProSubscriber(false);
