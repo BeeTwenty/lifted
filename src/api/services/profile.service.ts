@@ -33,4 +33,8 @@ export const profileService = {
     if (error) throw error;
     return data;
   },
+
+  async updateSubscriptionStatus(status: "basic" | "pro") {
+    return this.updateProfile({ status });
+  }
 };

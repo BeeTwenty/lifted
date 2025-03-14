@@ -7,15 +7,58 @@ import { CreditCard, CheckCircle, XCircle, Shield, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { api } from "@/api/config";
+import { profileService } from "@/api/services/profile.service";
 
 export const SubscriptionManager = () => {
   const { toast } = useToast();
   const [status, setStatus] = useState<"basic" | "pro">("basic");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [debugInfo, setDebugInfo] = useState<string | null>(null);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
 
   useEffect(() => {
+    // Check for Stripe session ID in URL parameters
+    const checkStripeSession = async () => {
+      setIsCheckingSession(true);
+      try {
+        const url = new URL(window.location.href);
+        const sessionId = url.searchParams.get('session_id');
+        
+        if (sessionId) {
+          // Clear the session ID from the URL without reloading
+          window.history.replaceState({}, document.title, window.location.pathname);
+          
+          // Temporarily show a processing message
+          toast({
+            title: "Processing Subscription",
+            description: "Finalizing your subscription...",
+          });
+          
+          // Update the user status to pro
+          await profileService.updateSubscriptionStatus("pro");
+          
+          // Update local state
+          setStatus("pro");
+          
+          // Show success message
+          toast({
+            title: "Subscription Activated",
+            description: "Your Pro subscription has been successfully activated!",
+            variant: "default",
+          });
+        }
+      } catch (error: any) {
+        console.error("Error processing subscription:", error);
+        toast({
+          variant: "destructive",
+          title: "Subscription Error",
+          description: error.message || "Failed to process subscription",
+        });
+      } finally {
+        setIsCheckingSession(false);
+      }
+    };
+
     const fetchSubscriptionStatus = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -36,13 +79,12 @@ export const SubscriptionManager = () => {
       }
     };
 
-    fetchSubscriptionStatus();
-  }, []);
+    checkStripeSession().then(() => fetchSubscriptionStatus());
+  }, [toast]);
 
   const handleSubscribe = async () => {
     setIsLoading(true);
     setError(null);
-    setDebugInfo(null);
     
     try {
       // Get the current URL for success and cancel URLs
@@ -85,9 +127,6 @@ export const SubscriptionManager = () => {
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Error response from Stripe function:", errorText);
-        
-        // Save debug info
-        setDebugInfo(`Status: ${response.status}, Response: ${errorText}`);
         
         try {
           const errorJson = JSON.parse(errorText);
@@ -191,11 +230,11 @@ export const SubscriptionManager = () => {
         </Alert>
       )}
       
-      {debugInfo && (
-        <Alert className="bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800">
-          <Info className="h-4 w-4" />
-          <AlertTitle>Debug Information</AlertTitle>
-          <AlertDescription className="font-mono text-xs break-all">{debugInfo}</AlertDescription>
+      {isCheckingSession && (
+        <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
+          <Info className="h-4 w-4 animate-pulse" />
+          <AlertTitle>Checking subscription status...</AlertTitle>
+          <AlertDescription>Please wait while we verify your subscription status.</AlertDescription>
         </Alert>
       )}
       
@@ -333,29 +372,6 @@ export const SubscriptionManager = () => {
           Pro subscriptions give you access to all premium features. You can cancel anytime.
         </AlertDescription>
       </Alert>
-
-      <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
-        <Info className="h-4 w-4" />
-        <AlertTitle>Test Connection</AlertTitle>
-        <AlertDescription>
-          <p className="mb-2">If you're experiencing issues with Stripe integration, check that:</p>
-          <ul className="list-disc pl-5 space-y-1 text-sm">
-            <li>Your Stripe account is properly set up</li>
-            <li>The price ID exists in your Stripe dashboard</li>
-            <li>STRIPE_SECRET_KEY is correctly set in Supabase Edge Function secrets</li>
-          </ul>
-          <Button 
-            size="sm" 
-            variant="outline" 
-            className="mt-3"
-            onClick={handleSubscribe}
-            disabled={isLoading}
-          >
-            Test Stripe Connection
-          </Button>
-        </AlertDescription>
-      </Alert>
     </div>
   );
 };
-
