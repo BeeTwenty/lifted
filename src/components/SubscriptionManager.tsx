@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -92,31 +91,24 @@ export function SubscriptionManager() {
       if (!sessionAuth.session) throw new Error("No active session");
 
       console.log("Creating checkout session for price:", plan.stripePriceId);
-      console.log("Success URL:", window.location.origin);
-      console.log("Cancel URL:", window.location.origin);
       
       // Make sure we have a valid price ID
       if (!plan.stripePriceId) {
         throw new Error("No price ID available for this plan");
       }
       
-      // Create the request body as a proper JSON object
-      const requestBody = {
-        priceId: plan.stripePriceId,
-        successUrl: window.location.origin,
-        cancelUrl: window.location.origin,
-      };
-      
-      console.log("Request body:", JSON.stringify(requestBody));
-      
-      // Call the Stripe edge function with the proper body format
+      // Create the checkout session with properly formatted request
       const { data, error } = await supabase.functions.invoke("stripe/create-checkout-session", {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${sessionAuth.session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: requestBody, // Pass the object directly
+        body: {
+          priceId: plan.stripePriceId,
+          successUrl: window.location.origin,
+          cancelUrl: window.location.origin,
+        },
       });
       
       if (error) {

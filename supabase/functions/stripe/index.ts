@@ -1,13 +1,7 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import Stripe from 'https://esm.sh/stripe@12.0.0?target=deno';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
-
-const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
-  apiVersion: '2023-10-16',
-});
-
-const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,7 +10,6 @@ const corsHeaders = {
 
 serve(async (req) => {
   console.log(`Request received: ${req.method} ${req.url}`);
-  console.log('Request headers:', JSON.stringify(Object.fromEntries(req.headers.entries())));
   
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -25,6 +18,17 @@ serve(async (req) => {
   }
 
   try {
+    // Initialize Stripe with the secret key
+    const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
+    if (!stripeSecretKey) {
+      console.error("STRIPE_SECRET_KEY is not configured");
+      throw new Error("Stripe secret key is not configured");
+    }
+    
+    const stripe = new Stripe(stripeSecretKey, {
+      apiVersion: '2023-10-16',
+    });
+
     const url = new URL(req.url);
     const pathParts = url.pathname.split('/');
     const endpoint = pathParts[pathParts.length - 1];
@@ -32,11 +36,13 @@ serve(async (req) => {
     console.log(`Request to endpoint: ${endpoint}`);
 
     // Initialize Supabase client with service role key to bypass RLS
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     // Handle webhook requests separately as they don't require authentication
     if (endpoint === 'webhook') {
-      return handleWebhook(req, supabaseAdmin);
+      return handleWebhook(req, supabaseAdmin, stripe);
     }
 
     // Verify the session for non-webhook endpoints
@@ -59,41 +65,16 @@ serve(async (req) => {
     // Extract request data
     let requestData;
     
-    // Create a copy of the request before reading the body
-    const reqClone = req.clone();
-    
     try {
-      const contentType = req.headers.get('Content-Type') || '';
-      console.log('Content-Type header:', contentType);
+      // Clone the request to ensure we can read the body
+      const reqBody = await req.json();
+      console.log('Request body:', reqBody);
       
-      if (contentType.includes('application/json')) {
-        // Parse JSON body
-        const bodyText = await req.text();
-        console.log('Raw request body:', bodyText);
-        
-        if (bodyText && bodyText.trim() !== '') {
-          try {
-            requestData = JSON.parse(bodyText);
-            console.log('Parsed request data:', JSON.stringify(requestData));
-          } catch (parseError) {
-            console.error('JSON parse error:', parseError);
-            throw new Error(`Failed to parse request body as JSON: ${parseError.message}`);
-          }
-        } else {
-          console.error('Empty JSON body');
-          throw new Error('Request body is empty');
-        }
-      } else {
-        // For non-JSON content types, try to parse as form data
-        const formData = await req.formData();
-        requestData = Object.fromEntries(formData.entries());
-        console.log('Parsed form data:', JSON.stringify(requestData));
+      if (!reqBody || typeof reqBody !== 'object') {
+        throw new Error('Invalid request body format');
       }
       
-      // If we get here and still don't have request data, it's an issue
-      if (!requestData) {
-        throw new Error('No request data could be extracted');
-      }
+      requestData = reqBody;
     } catch (e) {
       console.error('Error processing request body:', e);
       return new Response(
@@ -109,10 +90,10 @@ serve(async (req) => {
     let result;
     switch (endpoint) {
       case 'create-checkout-session':
-        result = await handleCreateCheckoutSession(userId, requestData, supabaseAdmin, reqClone);
+        result = await handleCreateCheckoutSession(userId, requestData, supabaseAdmin, stripe);
         break;
       case 'customer-portal':
-        result = await handleCustomerPortal(userId, requestData, supabaseAdmin, reqClone);
+        result = await handleCustomerPortal(userId, requestData, supabaseAdmin, stripe);
         break;
       default:
         throw new Error('Invalid endpoint');
@@ -134,7 +115,7 @@ serve(async (req) => {
   }
 });
 
-async function handleCreateCheckoutSession(userId, data, supabase, req) {
+async function handleCreateCheckoutSession(userId, data, supabase, stripe) {
   console.log(`Creating checkout session for user ${userId}`);
   console.log('Request data for checkout:', JSON.stringify(data));
   
@@ -225,7 +206,7 @@ async function handleCreateCheckoutSession(userId, data, supabase, req) {
   }
 }
 
-async function handleCustomerPortal(userId, data, supabase, req) {
+async function handleCustomerPortal(userId, data, supabase, stripe) {
   console.log(`Creating customer portal session for user ${userId}`);
   console.log('Request data for customer portal:', JSON.stringify(data));
   
@@ -250,7 +231,7 @@ async function handleCustomerPortal(userId, data, supabase, req) {
   const stripeCustomerId = paymentData[0].stripe_customer_id;
   console.log('Using customer portal for:', stripeCustomerId);
 
-  const returnUrl = data.returnUrl || `${new URL(req.url).origin}`;
+  const returnUrl = data.returnUrl || new URL(req.url).origin;
   console.log('Return URL:', returnUrl);
   
   // Create a billing portal session
@@ -263,7 +244,7 @@ async function handleCustomerPortal(userId, data, supabase, req) {
   return { url: session.url };
 }
 
-async function handleWebhook(req, supabase) {
+async function handleWebhook(req, supabase, stripe) {
   const signature = req.headers.get('stripe-signature');
   if (!signature) {
     console.error('No Stripe signature found');
