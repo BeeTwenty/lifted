@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -98,7 +97,7 @@ export function SubscriptionManager() {
         throw new Error("No price ID available for this plan");
       }
       
-      // Create a proper request body object
+      // Ensure the request body is properly formatted
       const requestBody = {
         priceId: plan.stripePriceId,
         successUrl: window.location.origin,
