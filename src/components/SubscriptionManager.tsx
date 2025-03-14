@@ -110,8 +110,11 @@ export function SubscriptionManager() {
       
       console.log("Request body for Stripe function:", requestBody);
 
+      // Use the current origin for the API endpoint instead of hardcoded domain
+      const functionUrl = `${window.location.origin}/functions/v1/stripe`;
+      
       // Use Fetch API directly for more control over the request
-      const response = await fetch(`${window.location.origin}/functions/v1/stripe`, {
+      const response = await fetch(functionUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
@@ -170,8 +173,11 @@ export function SubscriptionManager() {
       
       console.log("Request body for customer portal:", requestBody);
       
+      // Use the current origin for the API endpoint instead of hardcoded domain
+      const functionUrl = `${window.location.origin}/functions/v1/stripe`;
+      
       // Use Fetch API directly for more control over the request
-      const response = await fetch(`${window.location.origin}/functions/v1/stripe`, {
+      const response = await fetch(functionUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
