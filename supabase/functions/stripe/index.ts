@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import Stripe from 'https://esm.sh/stripe@12.0.0?target=deno';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
@@ -64,31 +63,31 @@ serve(async (req) => {
     const userId = user.id;
     console.log('Authenticated user:', userId);
 
-    // Important: Create a clean clone of the request before using it
-    const clonedReq = req.clone();
+    // READ AND LOG THE RAW REQUEST BODY - Creating a clone to avoid consuming the body
+    const reqClone = req.clone();
+    let rawBody;
     
-    // Extract and log the raw request body
-    let rawBody = '';
     try {
-      rawBody = await clonedReq.text();
+      rawBody = await reqClone.text();
+      console.log('Raw request body length:', rawBody.length);
       console.log('Raw request body:', rawBody);
-    } catch (error) {
-      console.error('Error reading request body:', error.message);
-      throw new Error(`Failed to read request body: ${error.message}`);
+    } catch (readError) {
+      console.error('Error reading request body:', readError);
+      return new Response(
+        JSON.stringify({ error: 'Error reading request body', details: readError.message }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
     
-    // Validate that the body is not empty
+    // Check if body is empty
     if (!rawBody || rawBody.trim() === '') {
-      console.error('Empty request body received');
+      console.error('REQUEST BODY IS EMPTY');
       return new Response(
         JSON.stringify({ 
-          error: 'Request body cannot be empty',
-          details: 'Please ensure your request includes a properly formatted JSON body' 
+          error: 'Request body is empty', 
+          details: 'Please ensure you are sending data in the request body' 
         }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -96,31 +95,24 @@ serve(async (req) => {
     let requestData;
     try {
       requestData = JSON.parse(rawBody);
-      console.log('Parsed request data:', JSON.stringify(requestData));
+      console.log('Successfully parsed request data:', JSON.stringify(requestData));
     } catch (parseError) {
-      console.error('Failed to parse JSON:', parseError.message);
-      console.error('Problematic body text:', rawBody);
+      console.error('Failed to parse JSON body:', parseError.message);
       return new Response(
         JSON.stringify({ 
           error: `Invalid JSON format: ${parseError.message}`,
-          details: 'Please ensure your request includes a properly formatted JSON body' 
+          details: 'The request body must be a valid JSON object' 
         }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Check if requestData is undefined or missing critical properties
-    if (!requestData) {
-      console.error('Request data is undefined after processing');
+    // Validate requestData
+    if (!requestData || typeof requestData !== 'object') {
+      console.error('Request data is not a valid object:', requestData);
       return new Response(
-        JSON.stringify({ error: 'Invalid or empty request data' }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+        JSON.stringify({ error: 'Invalid request data format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -132,10 +124,7 @@ serve(async (req) => {
           console.error('Missing priceId in requestData:', requestData);
           return new Response(
             JSON.stringify({ error: 'Missing required field: priceId' }),
-            { 
-              status: 400, 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            }
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
         result = await handleCreateCheckoutSession(userId, requestData, supabaseAdmin, stripe, url.origin);
@@ -155,10 +144,7 @@ serve(async (req) => {
     console.error('Stripe API Error:', error.message);
     return new Response(
       JSON.stringify({ error: error.message }),
-      { 
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
