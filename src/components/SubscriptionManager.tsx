@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -103,6 +104,7 @@ export function SubscriptionManager() {
       
       console.log("Sending request with body:", JSON.stringify(requestBody));
 
+      // Use the invoke method with explicitly set Content-Type header
       const { data, error } = await supabase.functions.invoke("stripe/create-checkout-session", {
         method: 'POST',
         headers: {

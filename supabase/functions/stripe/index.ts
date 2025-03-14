@@ -34,6 +34,8 @@ serve(async (req) => {
     const endpoint = pathParts[pathParts.length - 1];
 
     console.log(`Request to endpoint: ${endpoint}`);
+    console.log(`Content-Type: ${req.headers.get('content-type')}`);
+    console.log(`Request method: ${req.method}`);
 
     // Initialize Supabase client with service role key to bypass RLS
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
@@ -67,9 +69,13 @@ serve(async (req) => {
     
     try {
       const contentType = req.headers.get('content-type');
+      console.log('Content-Type header:', contentType);
+      
       if (contentType && contentType.includes('application/json')) {
-        const clonedReq = req.clone(); // Clone the request to avoid consuming it twice
+        // Create a clone of the request before consuming the body
+        const clonedReq = req.clone();
         const bodyText = await clonedReq.text();
+        
         console.log('Raw request body:', bodyText);
         
         if (!bodyText || bodyText.trim() === '') {
@@ -79,7 +85,7 @@ serve(async (req) => {
         
         try {
           requestData = JSON.parse(bodyText);
-          console.log('Parsed request data:', requestData);
+          console.log('Parsed request data:', JSON.stringify(requestData));
         } catch (parseError) {
           console.error('Failed to parse JSON:', parseError.message);
           console.error('Problematic body text:', bodyText);
@@ -90,9 +96,12 @@ serve(async (req) => {
         throw new Error('Content-Type must be application/json');
       }
     } catch (error) {
-      console.error('Error processing request body:', error);
+      console.error('Error processing request body:', error.message);
       return new Response(
-        JSON.stringify({ error: error.message, details: "Please ensure your request includes a properly formatted JSON body and the Content-Type header is set to application/json" }),
+        JSON.stringify({ 
+          error: error.message, 
+          details: "Please ensure your request includes a properly formatted JSON body and the Content-Type header is set to application/json" 
+        }),
         { 
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
