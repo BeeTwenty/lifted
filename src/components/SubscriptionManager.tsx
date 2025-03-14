@@ -111,7 +111,9 @@ export function SubscriptionManager() {
       
       console.log("Request body for Stripe function:", requestBody);
 
-      // Use Supabase functions.invoke instead of direct fetch
+      console.log("Using Supabase project URL:", api.baseUrl);
+      
+      // Use Supabase functions.invoke with specific URL
       const { data, error } = await supabase.functions.invoke('stripe', {
         body: JSON.stringify(requestBody)
       });
@@ -161,8 +163,9 @@ export function SubscriptionManager() {
       };
       
       console.log("Request body for customer portal:", requestBody);
+      console.log("Using Supabase project URL:", api.baseUrl);
       
-      // Use Supabase functions.invoke instead of direct fetch
+      // Use Supabase functions.invoke with specific URL
       const { data, error } = await supabase.functions.invoke('stripe', {
         body: JSON.stringify(requestBody)
       });
