@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -96,7 +95,6 @@ export function SubscriptionManager() {
         throw new Error("No price ID available for this plan");
       }
       
-      // Create request body as a plain JavaScript object
       const requestBody = {
         priceId: plan.stripePriceId,
         successUrl: window.location.origin,
@@ -105,32 +103,28 @@ export function SubscriptionManager() {
       
       console.log("Sending request with body:", JSON.stringify(requestBody));
 
-      // First, try making a direct fetch request to debug the issue
-      const response = await fetch(`${supabase.functions.url}/stripe/create-checkout-session`, {
+      const { data, error } = await supabase.functions.invoke('stripe/create-checkout-session', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${sessionAuth.session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestBody),
+        body: requestBody,
       });
       
-      console.log("Raw response status:", response.status);
-      const responseData = await response.json();
-      console.log("Raw response data:", responseData);
+      console.log("Response from edge function:", data, error);
       
-      if (!response.ok) {
-        console.error("Response error:", responseData);
-        throw new Error(responseData.error || "Error creating checkout session");
+      if (error) {
+        console.error("Stripe function error:", error);
+        throw new Error(error.message);
       }
 
-      if (!responseData || !responseData.url) {
-        console.error("Invalid response from server:", responseData);
+      if (!data || !data.url) {
+        console.error("Invalid response from server:", data);
         throw new Error("Invalid response from server");
       }
 
-      console.log("Redirecting to checkout URL:", responseData.url);
-      window.location.href = responseData.url;
+      console.log("Redirecting to checkout URL:", data.url);
+      window.location.href = data.url;
     } catch (error: any) {
       console.error("Error creating checkout session:", error);
       setCheckoutError(error.message);
@@ -155,23 +149,21 @@ export function SubscriptionManager() {
         returnUrl: window.location.origin
       };
       
-      console.log("Sending request with body:", JSON.stringify(requestBody));
+      console.log("Sending request to customer portal with body:", JSON.stringify(requestBody));
       
-      // Use direct fetch instead of supabase.functions.invoke
-      const response = await fetch(`${supabase.functions.url}/stripe/customer-portal`, {
+      const { data, error } = await supabase.functions.invoke('stripe/customer-portal', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${sessionAuth.session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestBody),
+        body: requestBody,
       });
       
-      const data = await response.json();
+      console.log("Response from customer portal:", data, error);
       
-      if (!response.ok) {
-        console.error("Response error:", data);
-        throw new Error(data.error || "Error accessing customer portal");
+      if (error) {
+        console.error("Customer portal error:", error);
+        throw new Error(error.message);
       }
 
       if (!data || !data.url) {
