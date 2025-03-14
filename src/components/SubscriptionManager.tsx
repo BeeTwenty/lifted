@@ -116,7 +116,8 @@ export function SubscriptionManager() {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
-          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+          // Get the Supabase API key from import.meta.env instead of process.env
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || "",
         },
         body: JSON.stringify(requestBody)
       });
@@ -175,7 +176,8 @@ export function SubscriptionManager() {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
-          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+          // Get the Supabase API key from import.meta.env instead of process.env
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || "",
         },
         body: JSON.stringify(requestBody)
       });
