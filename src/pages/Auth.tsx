@@ -33,7 +33,10 @@ export default function Auth() {
         password,
       });
       if (error) throw error;
-      navigate("/");
+      
+      setTimeout(() => {
+        navigate("/");
+      }, 500);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -73,6 +76,9 @@ export default function Auth() {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/`,
+        }
       });
       if (error) throw error;
     } catch (error: any) {

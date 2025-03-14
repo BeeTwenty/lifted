@@ -93,18 +93,50 @@ serve(async (req) => {
     // Parse the request body safely
     let requestData;
     try {
-      requestData = await req.json();
-      console.log('Request body parsed:', requestData);
+      // Check if the request has a body
+      const contentType = req.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        console.error('Invalid content type, expected application/json, got:', contentType);
+        return new Response(
+          JSON.stringify({ error: 'Content-Type must be application/json' }),
+          { status: 400, headers: corsHeaders }
+        );
+      }
+      
+      // Clone the request to ensure we can read the body
+      const clonedReq = req.clone();
+      const bodyText = await clonedReq.text();
+      
+      if (!bodyText || bodyText.trim() === '') {
+        console.error('Request body is empty');
+        return new Response(
+          JSON.stringify({ error: 'Request body is empty' }),
+          { status: 400, headers: corsHeaders }
+        );
+      }
+      
+      console.log('Raw request body:', bodyText);
+      
+      try {
+        requestData = JSON.parse(bodyText);
+        console.log('Parsed request body:', requestData);
+      } catch (parseError) {
+        console.error('Failed to parse JSON body:', parseError, 'Body:', bodyText);
+        return new Response(
+          JSON.stringify({ error: 'Invalid JSON in request body' }),
+          { status: 400, headers: corsHeaders }
+        );
+      }
     } catch (error) {
-      console.error('Error parsing request body:', error);
+      console.error('Error processing request body:', error);
       return new Response(
-        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        JSON.stringify({ error: 'Failed to read request body' }),
         { status: 400, headers: corsHeaders }
       );
     }
 
     // Determine which endpoint to use
-    const endpoint = requestData.endpoint || 'create-checkout-session';
+    const endpoint = requestData?.endpoint || 'create-checkout-session';
     console.log(`Processing endpoint: ${endpoint}`);
 
     // Handle different endpoints
