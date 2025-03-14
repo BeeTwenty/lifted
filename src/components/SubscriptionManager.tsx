@@ -106,8 +106,7 @@ export function SubscriptionManager() {
         endpoint: "create-checkout-session"
       };
       
-      const bodyString = JSON.stringify(requestBody);
-      console.log("Sending request with body:", bodyString);
+      console.log("Sending request with body:", JSON.stringify(requestBody));
 
       const { data, error } = await supabase.functions.invoke('stripe', {
         method: 'POST',
@@ -115,7 +114,7 @@ export function SubscriptionManager() {
           Authorization: `Bearer ${session.access_token}`,
           'Content-Type': 'application/json'
         },
-        body: bodyString
+        body: requestBody
       });
       
       console.log("Response from Stripe function:", data, error);

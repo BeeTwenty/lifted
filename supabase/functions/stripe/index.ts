@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import Stripe from 'https://esm.sh/stripe@12.0.0?target=deno';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
@@ -62,7 +63,7 @@ serve(async (req) => {
     // Handle webhook requests (they come directly from Stripe, not through the front-end)
     const url = new URL(req.url);
     if (url.pathname.endsWith('/webhook')) {
-      return handleWebhook(req, supabaseAdmin, stripe, corsHeaders);
+      return await handleWebhook(req, supabaseAdmin, stripe, corsHeaders, requestId);
     }
 
     // For all other endpoints, verify authentication
@@ -78,22 +79,20 @@ serve(async (req) => {
     const token = authHeader.substring(7);
     console.log(`[${requestId}] Token received:`, token.substring(0, 10) + '...');
 
-    // Verify the user token
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-    if (authError || !user) {
-      console.error(`[${requestId}] Auth error:`, authError);
+    // Check Content-Type header
+    const contentType = req.headers.get('Content-Type');
+    if (!contentType || !contentType.includes('application/json')) {
+      console.error(`[${requestId}] Invalid Content-Type: ${contentType}`);
       return new Response(
-        JSON.stringify({ error: 'Invalid token or user not found' }),
-        { status: 401, headers: corsHeaders }
+        JSON.stringify({ error: 'Content-Type must be application/json' }),
+        { status: 400, headers: corsHeaders }
       );
     }
 
-    const userId = user.id;
-    console.log(`[${requestId}] Authenticated user:`, userId);
-
     // Safe way to get request body as text first
+    let bodyText;
     try {
-      const bodyText = await req.text();
+      bodyText = await req.text();
       console.log(`[${requestId}] Raw request body:`, bodyText);
       
       if (!bodyText || bodyText.trim() === '') {
@@ -103,19 +102,40 @@ serve(async (req) => {
           { status: 400, headers: corsHeaders }
         );
       }
-      
-      // Try to parse the JSON body
-      let requestData;
-      try {
-        requestData = JSON.parse(bodyText);
-        console.log(`[${requestId}] Parsed request data:`, requestData);
-      } catch (parseError) {
-        console.error(`[${requestId}] Error parsing JSON:`, parseError);
+    } catch (bodyError) {
+      console.error(`[${requestId}] Error reading request body:`, bodyError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to read request body' }),
+        { status: 400, headers: corsHeaders }
+      );
+    }
+    
+    // Try to parse the JSON body
+    let requestData;
+    try {
+      requestData = JSON.parse(bodyText);
+      console.log(`[${requestId}] Parsed request data:`, requestData);
+    } catch (parseError) {
+      console.error(`[${requestId}] Error parsing JSON:`, parseError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
+    // Verify the user token
+    try {
+      const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+      if (authError || !user) {
+        console.error(`[${requestId}] Auth error:`, authError);
         return new Response(
-          JSON.stringify({ error: 'Invalid JSON in request body' }),
-          { status: 400, headers: corsHeaders }
+          JSON.stringify({ error: 'Invalid token or user not found' }),
+          { status: 401, headers: corsHeaders }
         );
       }
+
+      const userId = user.id;
+      console.log(`[${requestId}] Authenticated user:`, userId);
 
       // Determine which endpoint to use
       const endpoint = requestData?.endpoint || 'create-checkout-session';
@@ -132,11 +152,11 @@ serve(async (req) => {
               { status: 400, headers: corsHeaders }
             );
           }
-          result = await handleCreateCheckoutSession(userId, requestData, supabaseAdmin, stripe);
+          result = await handleCreateCheckoutSession(userId, requestData, supabaseAdmin, stripe, requestId);
           break;
           
         case 'customer-portal':
-          result = await handleCustomerPortal(userId, requestData, supabaseAdmin, stripe);
+          result = await handleCustomerPortal(userId, requestData, supabaseAdmin, stripe, requestId);
           break;
           
         default:
@@ -152,15 +172,13 @@ serve(async (req) => {
         JSON.stringify(result),
         { status: 200, headers: corsHeaders }
       );
-      
-    } catch (bodyError) {
-      console.error(`[${requestId}] Error reading request body:`, bodyError);
+    } catch (error) {
+      console.error(`[${requestId}] Authentication error:`, error);
       return new Response(
-        JSON.stringify({ error: 'Failed to read request body' }),
-        { status: 400, headers: corsHeaders }
+        JSON.stringify({ error: 'Authentication failed' }),
+        { status: 401, headers: corsHeaders }
       );
     }
-    
   } catch (error) {
     console.error(`[${requestId}] Unhandled error:`, error);
     return new Response(
@@ -170,7 +188,7 @@ serve(async (req) => {
   }
 });
 
-async function handleCreateCheckoutSession(userId, data, supabase, stripe) {
+async function handleCreateCheckoutSession(userId, data, supabase, stripe, requestId) {
   console.log(`[${requestId}] Creating checkout session for user ${userId}`);
   
   if (!data.priceId) {
@@ -191,7 +209,7 @@ async function handleCreateCheckoutSession(userId, data, supabase, stripe) {
 
   if (paymentData && paymentData.length > 0 && paymentData[0].stripe_customer_id) {
     stripeCustomerId = paymentData[0].stripe_customer_id;
-    console.log('Using existing Stripe customer:', stripeCustomerId);
+    console.log(`[${requestId}] Using existing Stripe customer:`, stripeCustomerId);
   } else {
     // Create a new customer
     const { data: userData } = await supabase.auth.admin.getUserById(userId);
@@ -206,7 +224,7 @@ async function handleCreateCheckoutSession(userId, data, supabase, stripe) {
       },
     });
     stripeCustomerId = customer.id;
-    console.log('Created new Stripe customer:', stripeCustomerId);
+    console.log(`[${requestId}] Created new Stripe customer:`, stripeCustomerId);
   }
 
   // Determine success and cancel URLs
@@ -232,13 +250,13 @@ async function handleCreateCheckoutSession(userId, data, supabase, stripe) {
     },
   });
 
-  console.log('Created checkout session:', session.id);
-  console.log('Checkout URL:', session.url);
+  console.log(`[${requestId}] Created checkout session:`, session.id);
+  console.log(`[${requestId}] Checkout URL:`, session.url);
   
   return { url: session.url };
 }
 
-async function handleCustomerPortal(userId, data, supabase, stripe) {
+async function handleCustomerPortal(userId, data, supabase, stripe, requestId) {
   console.log(`[${requestId}] Creating customer portal session for user ${userId}`);
   
   // Get the customer ID from the payments table
@@ -267,14 +285,16 @@ async function handleCustomerPortal(userId, data, supabase, stripe) {
     return_url: returnUrl,
   });
 
-  console.log('Created customer portal session:', session.url);
+  console.log(`[${requestId}] Created customer portal session:`, session.url);
   return { url: session.url };
 }
 
-async function handleWebhook(req, supabase, stripe, corsHeaders) {
+async function handleWebhook(req, supabase, stripe, corsHeaders, requestId) {
+  console.log(`[${requestId}] Processing webhook`);
+  
   const signature = req.headers.get('stripe-signature');
   if (!signature) {
-    console.error('No Stripe signature found');
+    console.error(`[${requestId}] No Stripe signature found`);
     return new Response(
       JSON.stringify({ error: 'No Stripe signature found' }),
       { status: 400, headers: corsHeaders }
@@ -283,7 +303,7 @@ async function handleWebhook(req, supabase, stripe, corsHeaders) {
 
   const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
   if (!webhookSecret) {
-    console.error('STRIPE_WEBHOOK_SECRET is not configured');
+    console.error(`[${requestId}] STRIPE_WEBHOOK_SECRET is not configured`);
     return new Response(
       JSON.stringify({ error: 'Webhook secret not configured' }),
       { status: 500, headers: corsHeaders }
@@ -293,7 +313,7 @@ async function handleWebhook(req, supabase, stripe, corsHeaders) {
   try {
     const body = await req.text();
     const event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-    console.log(`Webhook event verified: ${event.type}`);
+    console.log(`[${requestId}] Webhook event verified: ${event.type}`);
 
     switch (event.type) {
       case 'checkout.session.completed': {
@@ -378,7 +398,7 @@ async function handleWebhook(req, supabase, stripe, corsHeaders) {
       { status: 200, headers: corsHeaders }
     );
   } catch (err) {
-    console.error(`Webhook error: ${err.message}`);
+    console.error(`[${requestId}] Webhook error: ${err.message}`);
     return new Response(
       JSON.stringify({ error: `Webhook error: ${err.message}` }),
       { status: 400, headers: corsHeaders }
