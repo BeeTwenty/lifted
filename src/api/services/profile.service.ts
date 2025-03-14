@@ -36,5 +36,15 @@ export const profileService = {
 
   async updateSubscriptionStatus(status: "basic" | "pro") {
     return this.updateProfile({ status });
+  },
+  
+  async checkSubscriptionStatus() {
+    const profile = await this.getProfile();
+    return profile?.status || "basic";
+  },
+  
+  async isProSubscriber() {
+    const status = await this.checkSubscriptionStatus();
+    return status === "pro";
   }
 };

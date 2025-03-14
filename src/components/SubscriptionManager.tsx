@@ -8,13 +8,22 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { api } from "@/api/config";
 import { profileService } from "@/api/services/profile.service";
+import { useQuery } from "@tanstack/react-query";
 
 export const SubscriptionManager = () => {
   const { toast } = useToast();
-  const [status, setStatus] = useState<"basic" | "pro">("basic");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
+
+  // Use React Query to fetch and cache subscription status
+  const { data: status = "basic", refetch } = useQuery({
+    queryKey: ["subscriptionStatus"],
+    queryFn: async () => {
+      const status = await profileService.checkSubscriptionStatus();
+      return status;
+    }
+  });
 
   useEffect(() => {
     // Check for Stripe session ID in URL parameters
@@ -37,8 +46,8 @@ export const SubscriptionManager = () => {
           // Update the user status to pro
           await profileService.updateSubscriptionStatus("pro");
           
-          // Update local state
-          setStatus("pro");
+          // Refetch the subscription status
+          refetch();
           
           // Show success message
           toast({
@@ -59,28 +68,8 @@ export const SubscriptionManager = () => {
       }
     };
 
-    const fetchSubscriptionStatus = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("status")
-          .eq("id", user.id)
-          .single();
-
-        if (error) throw error;
-        if (data && data.status) {
-          setStatus(data.status as "basic" | "pro");
-        }
-      } catch (error: any) {
-        console.error("Error fetching subscription status:", error);
-      }
-    };
-
-    checkStripeSession().then(() => fetchSubscriptionStatus());
-  }, [toast]);
+    checkStripeSession();
+  }, [toast, refetch]);
 
   const handleSubscribe = async () => {
     setIsLoading(true);
@@ -110,7 +99,7 @@ export const SubscriptionManager = () => {
         throw new Error("You must be logged in to subscribe");
       }
       
-      // Use the baseUrl from the api config instead of directly accessing supabaseUrl
+      // Use the baseUrl from the api config
       const response = await fetch(
         `${api.baseUrl}/functions/v1/stripe`,
         {
@@ -123,7 +112,7 @@ export const SubscriptionManager = () => {
         }
       );
       
-      // Test connection by checking response status
+      // Check response status
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Error response from Stripe function:", errorText);
@@ -169,7 +158,7 @@ export const SubscriptionManager = () => {
       // Get the current user's session
       const { data: { session } } = await supabase.auth.getSession();
       
-      // Use the baseUrl from the api config instead of directly accessing supabaseUrl
+      // Use the baseUrl from the api config
       const response = await fetch(
         `${api.baseUrl}/functions/v1/stripe`,
         {
@@ -369,7 +358,7 @@ export const SubscriptionManager = () => {
         <Info className="h-4 w-4" />
         <AlertTitle>Subscription Information</AlertTitle>
         <AlertDescription>
-          Pro subscriptions give you access to all premium features. You can cancel anytime.
+          Pro subscriptions give you access to all premium features. You can manage or cancel your subscription at any time through the "Manage Subscription" button.
         </AlertDescription>
       </Alert>
     </div>

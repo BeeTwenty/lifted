@@ -1,4 +1,3 @@
-
 import { Card } from "@/components/ui/card";
 import { Activity, Timer, Flame, Calendar, Lock, CreditCard } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -6,9 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 import { startOfWeek } from "date-fns";
 import { calculateCurrentStreak, calculateWeeklyStreak } from "@/lib/export-utils";
-import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/components/AuthProvider";
 
 type CompletedWorkout = {
   id: string;
@@ -18,30 +17,7 @@ type CompletedWorkout = {
 };
 
 export function WorkoutStats() {
-  const [isPro, setIsPro] = useState(false);
-
-  useEffect(() => {
-    checkProStatus();
-  }, []);
-
-  const checkProStatus = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("status")
-        .eq("id", user.id)
-        .single();
-
-      if (error) throw error;
-      
-      setIsPro(data?.status === "pro");
-    } catch (error: any) {
-      console.error("Error checking pro status:", error.message);
-    }
-  };
+  const { isProSubscriber } = useAuth();
 
   // Fetch user profile and workout stats
   const { data: userStats } = useQuery({
@@ -97,7 +73,7 @@ export function WorkoutStats() {
         weeklyStreak
       };
     },
-    enabled: isPro, // Only fetch data if user is Pro
+    enabled: isProSubscriber, // Only fetch data if user is Pro
   });
 
   const workoutGoal = userStats?.workoutGoal || 5;
@@ -110,7 +86,7 @@ export function WorkoutStats() {
   const hoursRemaining = Math.max(hourGoal - (userStats?.totalHours || 0), 0);
 
   // If not pro, show pro upgrade message
-  if (!isPro) {
+  if (!isProSubscriber) {
     return (
       <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
         <div className="py-8 text-center">
