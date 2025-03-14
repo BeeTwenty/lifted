@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -103,12 +104,16 @@ export function SubscriptionManager() {
       
       console.log("Sending request with body:", JSON.stringify(requestBody));
 
-      const { data, error } = await supabase.functions.invoke('stripe/create-checkout-session', {
+      // Call the 'stripe' function with the 'create-checkout-session' endpoint
+      const { data, error } = await supabase.functions.invoke('stripe', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: requestBody,
+        body: {
+          ...requestBody,
+          endpoint: 'create-checkout-session'
+        },
       });
       
       console.log("Response from edge function:", data, error);
@@ -146,12 +151,14 @@ export function SubscriptionManager() {
       if (!sessionAuth.session) throw new Error("No active session");
 
       const requestBody = {
-        returnUrl: window.location.origin
+        returnUrl: window.location.origin,
+        endpoint: 'customer-portal'
       };
       
       console.log("Sending request to customer portal with body:", JSON.stringify(requestBody));
       
-      const { data, error } = await supabase.functions.invoke('stripe/customer-portal', {
+      // Call the 'stripe' function with the 'customer-portal' endpoint
+      const { data, error } = await supabase.functions.invoke('stripe', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

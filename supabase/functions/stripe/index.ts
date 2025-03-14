@@ -28,21 +28,17 @@ serve(async (req) => {
       apiVersion: '2023-10-16',
     });
 
-    const url = new URL(req.url);
-    const pathParts = url.pathname.split('/');
-    const endpoint = pathParts[pathParts.length - 1];
-
-    console.log(`Request to endpoint: ${endpoint}`);
-    console.log(`Content-Type: ${req.headers.get('content-type')}`);
-    console.log(`Request method: ${req.method}`);
-
     // Initialize Supabase client with service role key to bypass RLS
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     // Handle webhook requests separately as they don't require authentication
-    if (endpoint === 'webhook') {
+    const url = new URL(req.url);
+    const pathParts = url.pathname.split('/');
+    const pathEndpoint = pathParts[pathParts.length - 1];
+    
+    if (pathEndpoint === 'webhook') {
       return handleWebhook(req, supabaseAdmin, stripe);
     }
 
@@ -63,58 +59,34 @@ serve(async (req) => {
     const userId = user.id;
     console.log('Authenticated user:', userId);
 
-    // READ AND LOG THE RAW REQUEST BODY - Creating a clone to avoid consuming the body
-    const reqClone = req.clone();
-    let rawBody;
-    
-    try {
-      rawBody = await reqClone.text();
-      console.log('Raw request body length:', rawBody.length);
-      console.log('Raw request body:', rawBody);
-    } catch (readError) {
-      console.error('Error reading request body:', readError);
-      return new Response(
-        JSON.stringify({ error: 'Error reading request body', details: readError.message }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    // Check if body is empty
-    if (!rawBody || rawBody.trim() === '') {
-      console.error('REQUEST BODY IS EMPTY');
-      return new Response(
-        JSON.stringify({ 
-          error: 'Request body is empty', 
-          details: 'Please ensure you are sending data in the request body' 
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Parse the JSON body
+    // Parse the request body
     let requestData;
     try {
-      requestData = JSON.parse(rawBody);
-      console.log('Successfully parsed request data:', JSON.stringify(requestData));
-    } catch (parseError) {
-      console.error('Failed to parse JSON body:', parseError.message);
+      requestData = await req.json();
+      console.log('Request body:', JSON.stringify(requestData));
+      
+      // Check if body is empty or not an object
+      if (!requestData || typeof requestData !== 'object') {
+        console.error('Invalid request data format:', requestData);
+        throw new Error('Invalid request data format');
+      }
+    } catch (error) {
+      console.error('Error parsing request body:', error);
       return new Response(
-        JSON.stringify({ 
-          error: `Invalid JSON format: ${parseError.message}`,
-          details: 'The request body must be a valid JSON object' 
-        }),
+        JSON.stringify({ error: 'Error parsing request body', details: error.message }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Validate requestData
-    if (!requestData || typeof requestData !== 'object') {
-      console.error('Request data is not a valid object:', requestData);
-      return new Response(
-        JSON.stringify({ error: 'Invalid request data format' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Determine which endpoint to use (from the body or URL path)
+    let endpoint = requestData.endpoint || pathEndpoint;
+    
+    // Default to 'create-checkout-session' if no endpoint is specified
+    if (!endpoint || endpoint === 'stripe') {
+      endpoint = 'create-checkout-session';
     }
+    
+    console.log(`Processing endpoint: ${endpoint}`);
 
     // Handle different endpoints
     let result;
