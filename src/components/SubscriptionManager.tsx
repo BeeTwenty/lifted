@@ -87,8 +87,10 @@ export function SubscriptionManager() {
       setCheckoutLoading(true);
       setCheckoutError(null);
       
-      const { data: sessionAuth } = await supabase.auth.getSession();
-      if (!sessionAuth.session) throw new Error("No active session");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("You must be logged in to upgrade your subscription");
+      }
 
       console.log("Creating checkout session for price:", plan.stripePriceId);
       
@@ -98,7 +100,7 @@ export function SubscriptionManager() {
 
       const currentUrl = window.location.origin;
       
-      // Make sure the requestBody is valid JSON and includes the endpoint
+      // Prepare request body
       const requestBody = {
         priceId: plan.stripePriceId,
         successUrl: currentUrl,
@@ -108,17 +110,21 @@ export function SubscriptionManager() {
       
       console.log("Sending request with body:", JSON.stringify(requestBody));
 
-      // Simplified invocation - it should now work correctly
+      // Call the Stripe function
       const { data, error } = await supabase.functions.invoke('stripe', {
         method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
         body: requestBody
       });
       
-      console.log("Response from edge function:", data, error);
+      console.log("Response from Stripe function:", data, error);
       
       if (error) {
         console.error("Stripe function error:", error);
-        throw new Error(error.message);
+        throw new Error(error.message || "Error creating checkout session");
       }
 
       if (!data || !data.url) {
@@ -145,8 +151,10 @@ export function SubscriptionManager() {
     try {
       setManageLoading(true);
       
-      const { data: sessionAuth } = await supabase.auth.getSession();
-      if (!sessionAuth.session) throw new Error("No active session");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("You must be logged in to manage your subscription");
+      }
 
       const currentUrl = window.location.origin;
       
@@ -155,10 +163,14 @@ export function SubscriptionManager() {
         endpoint: 'customer-portal'
       };
       
-      console.log("Sending request to customer portal with body:", JSON.stringify(requestBody));
+      console.log("Sending request for customer portal with body:", JSON.stringify(requestBody));
       
       const { data, error } = await supabase.functions.invoke('stripe', {
         method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
         body: requestBody
       });
       
@@ -166,7 +178,7 @@ export function SubscriptionManager() {
       
       if (error) {
         console.error("Customer portal error:", error);
-        throw new Error(error.message);
+        throw new Error(error.message || "Error accessing customer portal");
       }
 
       if (!data || !data.url) {
@@ -284,7 +296,8 @@ export function SubscriptionManager() {
                   </ul>
                 </CardContent>
                 <CardFooter>
-                  {plan.id === 'basic' ? (
+                  {/* Show appropriate button based on plan status */}
+                  {plan.id === 'basic' && !isPro ? (
                     <Button 
                       className="w-full" 
                       variant="outline"
@@ -292,25 +305,23 @@ export function SubscriptionManager() {
                     >
                       Current Plan
                     </Button>
-                  ) : (
-                    isPro ? (
-                      <Button 
-                        className="w-full" 
-                        variant="outline" 
-                        disabled={true}
-                      >
-                        Current Plan
-                      </Button>
-                    ) : (
-                      <Button 
-                        className="w-full" 
-                        onClick={() => handleCheckout(plan)}
-                        disabled={checkoutLoading}
-                      >
-                        {checkoutLoading ? "Processing..." : "Upgrade to Pro"}
-                      </Button>
-                    )
-                  )}
+                  ) : plan.id === 'pro' && isPro ? (
+                    <Button 
+                      className="w-full" 
+                      variant="outline" 
+                      disabled={true}
+                    >
+                      Current Plan
+                    </Button>
+                  ) : plan.id === 'pro' && !isPro ? (
+                    <Button 
+                      className="w-full" 
+                      onClick={() => handleCheckout(plan)}
+                      disabled={checkoutLoading}
+                    >
+                      {checkoutLoading ? "Processing..." : "Upgrade to Pro"}
+                    </Button>
+                  ) : null}
                 </CardFooter>
               </Card>
             ))}
