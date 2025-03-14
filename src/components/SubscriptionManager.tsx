@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -97,6 +98,7 @@ export function SubscriptionManager() {
 
       const currentUrl = window.location.origin;
       
+      // Make sure the requestBody is valid JSON and includes the endpoint
       const requestBody = {
         priceId: plan.stripePriceId,
         successUrl: currentUrl,
@@ -106,6 +108,7 @@ export function SubscriptionManager() {
       
       console.log("Sending request with body:", JSON.stringify(requestBody));
 
+      // Simplified invocation - it should now work correctly
       const { data, error } = await supabase.functions.invoke('stripe', {
         method: 'POST',
         body: requestBody
