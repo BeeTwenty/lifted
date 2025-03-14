@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import Stripe from 'https://esm.sh/stripe@12.0.0?target=deno';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
@@ -67,11 +68,12 @@ serve(async (req) => {
     try {
       const contentType = req.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
-        const bodyText = await req.text();
+        const clonedReq = req.clone(); // Clone the request to avoid consuming it twice
+        const bodyText = await clonedReq.text();
         console.log('Raw request body:', bodyText);
         
         if (!bodyText || bodyText.trim() === '') {
-          console.error('Empty request body');
+          console.error('Empty request body received');
           throw new Error('Request body cannot be empty');
         }
         
@@ -80,16 +82,29 @@ serve(async (req) => {
           console.log('Parsed request data:', requestData);
         } catch (parseError) {
           console.error('Failed to parse JSON:', parseError.message);
+          console.error('Problematic body text:', bodyText);
           throw new Error(`Invalid JSON format: ${parseError.message}`);
         }
       } else {
-        console.error('Invalid content type:', contentType);
+        console.error('Invalid or missing content type:', contentType);
         throw new Error('Content-Type must be application/json');
       }
     } catch (error) {
       console.error('Error processing request body:', error);
       return new Response(
-        JSON.stringify({ error: error.message }),
+        JSON.stringify({ error: error.message, details: "Please ensure your request includes a properly formatted JSON body and the Content-Type header is set to application/json" }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    // Check if requestData is undefined or missing critical properties
+    if (!requestData) {
+      console.error('Request data is undefined after processing');
+      return new Response(
+        JSON.stringify({ error: 'Invalid or empty request data' }),
         { 
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -101,6 +116,16 @@ serve(async (req) => {
     let result;
     switch (endpoint) {
       case 'create-checkout-session':
+        if (!requestData.priceId) {
+          console.error('Missing priceId in requestData:', requestData);
+          return new Response(
+            JSON.stringify({ error: 'Missing required field: priceId' }),
+            { 
+              status: 400, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            }
+          );
+        }
         result = await handleCreateCheckoutSession(userId, requestData, supabaseAdmin, stripe, url.origin);
         break;
       case 'customer-portal':

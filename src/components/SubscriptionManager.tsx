@@ -8,7 +8,6 @@ import { Shield, Check, Gem, AlertTriangle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { UserProfile, SubscriptionPlan } from "@/types/workout";
 
-// Define the subscription plans
 const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   {
     id: "basic",
@@ -92,12 +91,10 @@ export function SubscriptionManager() {
 
       console.log("Creating checkout session for price:", plan.stripePriceId);
       
-      // Make sure we have a valid price ID
       if (!plan.stripePriceId) {
         throw new Error("No price ID available for this plan");
       }
       
-      // Ensure the request body is properly formatted
       const requestBody = {
         priceId: plan.stripePriceId,
         successUrl: window.location.origin,
@@ -106,7 +103,6 @@ export function SubscriptionManager() {
       
       console.log("Sending request with body:", JSON.stringify(requestBody));
 
-      // Make sure to include the Content-Type header
       const { data, error } = await supabase.functions.invoke("stripe/create-checkout-session", {
         method: 'POST',
         headers: {
@@ -127,7 +123,6 @@ export function SubscriptionManager() {
       }
 
       console.log("Redirecting to checkout URL:", data.url);
-      // Redirect to Stripe checkout
       window.location.href = data.url;
     } catch (error: any) {
       console.error("Error creating checkout session:", error);
@@ -149,14 +144,12 @@ export function SubscriptionManager() {
       const { data: sessionAuth } = await supabase.auth.getSession();
       if (!sessionAuth.session) throw new Error("No active session");
 
-      // Create a proper body object for the customer portal request
       const requestBody = {
         returnUrl: window.location.origin
       };
       
       console.log("Sending request with body:", JSON.stringify(requestBody));
       
-      // Make sure to include the Content-Type header
       const { data, error } = await supabase.functions.invoke("stripe/customer-portal", {
         method: 'POST',
         headers: {
@@ -174,7 +167,6 @@ export function SubscriptionManager() {
         throw new Error("Invalid response from server");
       }
 
-      // Redirect to Stripe customer portal
       window.location.href = data.url;
     } catch (error: any) {
       console.error("Error accessing customer portal:", error);
