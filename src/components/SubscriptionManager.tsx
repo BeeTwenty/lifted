@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -109,13 +108,9 @@ export function SubscriptionManager() {
         endpoint: "create-checkout-session"
       };
       
-      console.log("Request body for Stripe function:", requestBody);
-      console.log("Using Supabase project URL:", api.baseUrl);
+      console.log("Stripe function request:", JSON.stringify(requestBody));
       
-      // Add more detailed logging
-      console.log("Invoking Stripe function with explicit Content-Type");
-      
-      // Use Supabase functions.invoke with explicit stringification and content type
+      // Call Supabase Edge Function
       const { data, error } = await supabase.functions.invoke('stripe', {
         body: JSON.stringify(requestBody),
         headers: {
@@ -124,11 +119,11 @@ export function SubscriptionManager() {
       });
       
       if (error) {
-        console.error("Error response from Stripe function:", error);
+        console.error("Error invoking Stripe function:", error);
         throw new Error(`Error: ${error.message || "Unknown error"}`);
       }
       
-      console.log("Response from Stripe function:", data);
+      console.log("Stripe function response:", data);
       
       if (!data || !data.url) {
         console.error("Invalid response from server:", data);
@@ -167,13 +162,9 @@ export function SubscriptionManager() {
         endpoint: 'customer-portal'
       };
       
-      console.log("Request body for customer portal:", requestBody);
-      console.log("Using Supabase project URL:", api.baseUrl);
+      console.log("Customer portal request:", JSON.stringify(requestBody));
       
-      // Add more detailed logging
-      console.log("Invoking Stripe function for customer portal with explicit Content-Type");
-      
-      // Use Supabase functions.invoke with explicit stringification and content type
+      // Call Supabase Edge Function with explicit content type
       const { data, error } = await supabase.functions.invoke('stripe', {
         body: JSON.stringify(requestBody),
         headers: {
@@ -182,11 +173,11 @@ export function SubscriptionManager() {
       });
       
       if (error) {
-        console.error("Error response from customer portal:", error);
+        console.error("Error accessing customer portal:", error);
         throw new Error(`Error: ${error.message || "Unknown error"}`);
       }
       
-      console.log("Response from customer portal:", data);
+      console.log("Customer portal response:", data);
       
       if (!data || !data.url) {
         throw new Error("Invalid response from server");
