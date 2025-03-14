@@ -64,43 +64,46 @@ serve(async (req) => {
     const userId = user.id;
     console.log('Authenticated user:', userId);
 
-    // Extract request data from the request body
-    let requestData;
+    // Important: Create a clean clone of the request before using it
+    const clonedReq = req.clone();
     
+    // Extract and log the raw request body
+    let rawBody = '';
     try {
-      const contentType = req.headers.get('content-type');
-      console.log('Content-Type header:', contentType);
-      
-      if (contentType && contentType.includes('application/json')) {
-        // Create a clone of the request before consuming the body
-        const clonedReq = req.clone();
-        const bodyText = await clonedReq.text();
-        
-        console.log('Raw request body:', bodyText);
-        
-        if (!bodyText || bodyText.trim() === '') {
-          console.error('Empty request body received');
-          throw new Error('Request body cannot be empty');
-        }
-        
-        try {
-          requestData = JSON.parse(bodyText);
-          console.log('Parsed request data:', JSON.stringify(requestData));
-        } catch (parseError) {
-          console.error('Failed to parse JSON:', parseError.message);
-          console.error('Problematic body text:', bodyText);
-          throw new Error(`Invalid JSON format: ${parseError.message}`);
-        }
-      } else {
-        console.error('Invalid or missing content type:', contentType);
-        throw new Error('Content-Type must be application/json');
-      }
+      rawBody = await clonedReq.text();
+      console.log('Raw request body:', rawBody);
     } catch (error) {
-      console.error('Error processing request body:', error.message);
+      console.error('Error reading request body:', error.message);
+      throw new Error(`Failed to read request body: ${error.message}`);
+    }
+    
+    // Validate that the body is not empty
+    if (!rawBody || rawBody.trim() === '') {
+      console.error('Empty request body received');
       return new Response(
         JSON.stringify({ 
-          error: error.message, 
-          details: "Please ensure your request includes a properly formatted JSON body and the Content-Type header is set to application/json" 
+          error: 'Request body cannot be empty',
+          details: 'Please ensure your request includes a properly formatted JSON body' 
+        }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    // Parse the JSON body
+    let requestData;
+    try {
+      requestData = JSON.parse(rawBody);
+      console.log('Parsed request data:', JSON.stringify(requestData));
+    } catch (parseError) {
+      console.error('Failed to parse JSON:', parseError.message);
+      console.error('Problematic body text:', rawBody);
+      return new Response(
+        JSON.stringify({ 
+          error: `Invalid JSON format: ${parseError.message}`,
+          details: 'Please ensure your request includes a properly formatted JSON body' 
         }),
         { 
           status: 400,

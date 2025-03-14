@@ -104,14 +104,14 @@ export function SubscriptionManager() {
       
       console.log("Sending request with body:", JSON.stringify(requestBody));
 
-      // Use the invoke method with explicitly set Content-Type header
+      // Important: Use stringified JSON body and set appropriate content-type header
       const { data, error } = await supabase.functions.invoke("stripe/create-checkout-session", {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${sessionAuth.session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: requestBody,
+        body: requestBody, // Supabase SDK will handle JSON stringification
       });
       
       if (error) {
