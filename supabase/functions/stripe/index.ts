@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import Stripe from 'https://esm.sh/stripe@12.0.0?target=deno';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
@@ -12,17 +11,19 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  console.log(`Request received: ${req.method} ${req.url}`);
+  // Add a request ID for tracing through logs
+  const requestId = crypto.randomUUID();
+  console.log(`[${requestId}] Request received: ${req.method} ${req.url}`);
   
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    console.log('Handling CORS preflight request');
+    console.log(`[${requestId}] Handling CORS preflight request`);
     return new Response(null, { headers: corsHeaders, status: 204 });
   }
 
   // Only allow POST requests
   if (req.method !== 'POST') {
-    console.error(`Invalid method: ${req.method}`);
+    console.error(`[${requestId}] Invalid method: ${req.method}`);
     return new Response(
       JSON.stringify({ error: 'Method not allowed' }),
       { status: 405, headers: corsHeaders }
@@ -33,7 +34,7 @@ serve(async (req) => {
     // Initialize Stripe
     const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
     if (!stripeSecretKey) {
-      console.error("STRIPE_SECRET_KEY is not configured");
+      console.error(`[${requestId}] STRIPE_SECRET_KEY is not configured`);
       return new Response(
         JSON.stringify({ error: "Stripe secret key is not configured" }),
         { status: 500, headers: corsHeaders }
@@ -49,7 +50,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     
     if (!supabaseUrl || !supabaseServiceKey) {
-      console.error("Supabase credentials not configured");
+      console.error(`[${requestId}] Supabase credentials not configured`);
       return new Response(
         JSON.stringify({ error: "Supabase credentials not configured" }),
         { status: 500, headers: corsHeaders }
@@ -67,7 +68,7 @@ serve(async (req) => {
     // For all other endpoints, verify authentication
     const authHeader = req.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.error('Missing or invalid authorization header');
+      console.error(`[${requestId}] Missing or invalid authorization header`);
       return new Response(
         JSON.stringify({ error: 'Missing or invalid authorization header' }),
         { status: 401, headers: corsHeaders }
@@ -75,12 +76,12 @@ serve(async (req) => {
     }
     
     const token = authHeader.substring(7);
-    console.log('Token received:', token);
+    console.log(`[${requestId}] Token received:`, token.substring(0, 10) + '...');
 
     // Verify the user token
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
     if (authError || !user) {
-      console.error('Auth error:', authError);
+      console.error(`[${requestId}] Auth error:`, authError);
       return new Response(
         JSON.stringify({ error: 'Invalid token or user not found' }),
         { status: 401, headers: corsHeaders }
@@ -88,90 +89,80 @@ serve(async (req) => {
     }
 
     const userId = user.id;
-    console.log('Authenticated user:', userId);
+    console.log(`[${requestId}] Authenticated user:`, userId);
 
-    // Parse the request body safely
-    let requestData;
+    // Safe way to get request body as text first
     try {
-      // Check if the request has a body
-      const contentType = req.headers.get('content-type') || '';
-      if (!contentType.includes('application/json')) {
-        console.error('Invalid content type, expected application/json, got:', contentType);
-        return new Response(
-          JSON.stringify({ error: 'Content-Type must be application/json' }),
-          { status: 400, headers: corsHeaders }
-        );
-      }
-      
-      // Clone the request to ensure we can read the body
-      const clonedReq = req.clone();
-      const bodyText = await clonedReq.text();
+      const bodyText = await req.text();
+      console.log(`[${requestId}] Raw request body:`, bodyText);
       
       if (!bodyText || bodyText.trim() === '') {
-        console.error('Request body is empty');
+        console.error(`[${requestId}] Request body is empty`);
         return new Response(
           JSON.stringify({ error: 'Request body is empty' }),
           { status: 400, headers: corsHeaders }
         );
       }
       
-      console.log('Raw request body:', bodyText);
-      
+      // Try to parse the JSON body
+      let requestData;
       try {
         requestData = JSON.parse(bodyText);
-        console.log('Parsed request body:', requestData);
+        console.log(`[${requestId}] Parsed request data:`, requestData);
       } catch (parseError) {
-        console.error('Failed to parse JSON body:', parseError, 'Body:', bodyText);
+        console.error(`[${requestId}] Error parsing JSON:`, parseError);
         return new Response(
           JSON.stringify({ error: 'Invalid JSON in request body' }),
           { status: 400, headers: corsHeaders }
         );
       }
-    } catch (error) {
-      console.error('Error processing request body:', error);
+
+      // Determine which endpoint to use
+      const endpoint = requestData?.endpoint || 'create-checkout-session';
+      console.log(`[${requestId}] Processing endpoint: ${endpoint}`);
+
+      // Handle different endpoints
+      let result;
+      switch (endpoint) {
+        case 'create-checkout-session':
+          if (!requestData.priceId) {
+            console.error(`[${requestId}] Missing priceId in request body`);
+            return new Response(
+              JSON.stringify({ error: 'Missing required field: priceId' }),
+              { status: 400, headers: corsHeaders }
+            );
+          }
+          result = await handleCreateCheckoutSession(userId, requestData, supabaseAdmin, stripe);
+          break;
+          
+        case 'customer-portal':
+          result = await handleCustomerPortal(userId, requestData, supabaseAdmin, stripe);
+          break;
+          
+        default:
+          console.error(`[${requestId}] Invalid endpoint: ${endpoint}`);
+          return new Response(
+            JSON.stringify({ error: `Invalid endpoint: ${endpoint}` }),
+            { status: 400, headers: corsHeaders }
+          );
+      }
+
+      console.log(`[${requestId}] Successfully processed request, returning:`, result);
+      return new Response(
+        JSON.stringify(result),
+        { status: 200, headers: corsHeaders }
+      );
+      
+    } catch (bodyError) {
+      console.error(`[${requestId}] Error reading request body:`, bodyError);
       return new Response(
         JSON.stringify({ error: 'Failed to read request body' }),
         { status: 400, headers: corsHeaders }
       );
     }
-
-    // Determine which endpoint to use
-    const endpoint = requestData?.endpoint || 'create-checkout-session';
-    console.log(`Processing endpoint: ${endpoint}`);
-
-    // Handle different endpoints
-    let result;
-    switch (endpoint) {
-      case 'create-checkout-session':
-        if (!requestData.priceId) {
-          console.error('Missing priceId in request body');
-          return new Response(
-            JSON.stringify({ error: 'Missing required field: priceId' }),
-            { status: 400, headers: corsHeaders }
-          );
-        }
-        result = await handleCreateCheckoutSession(userId, requestData, supabaseAdmin, stripe);
-        break;
-        
-      case 'customer-portal':
-        result = await handleCustomerPortal(userId, requestData, supabaseAdmin, stripe);
-        break;
-        
-      default:
-        console.error(`Invalid endpoint: ${endpoint}`);
-        return new Response(
-          JSON.stringify({ error: `Invalid endpoint: ${endpoint}` }),
-          { status: 400, headers: corsHeaders }
-        );
-    }
-
-    return new Response(
-      JSON.stringify(result),
-      { status: 200, headers: corsHeaders }
-    );
     
   } catch (error) {
-    console.error('Error processing request:', error);
+    console.error(`[${requestId}] Unhandled error:`, error);
     return new Response(
       JSON.stringify({ error: error.message || 'Unknown error occurred' }),
       { status: 500, headers: corsHeaders }
@@ -180,7 +171,7 @@ serve(async (req) => {
 });
 
 async function handleCreateCheckoutSession(userId, data, supabase, stripe) {
-  console.log(`Creating checkout session for user ${userId}`);
+  console.log(`[${requestId}] Creating checkout session for user ${userId}`);
   
   if (!data.priceId) {
     throw new Error('Price ID is required');
@@ -222,7 +213,7 @@ async function handleCreateCheckoutSession(userId, data, supabase, stripe) {
   const successUrl = data.successUrl || 'https://workout.au11no.com';
   const cancelUrl = data.cancelUrl || 'https://workout.au11no.com';
   
-  console.log(`Success URL: ${successUrl}, Cancel URL: ${cancelUrl}`);
+  console.log(`[${requestId}] Success URL: ${successUrl}, Cancel URL: ${cancelUrl}`);
 
   // Create the checkout session
   const session = await stripe.checkout.sessions.create({
@@ -248,7 +239,7 @@ async function handleCreateCheckoutSession(userId, data, supabase, stripe) {
 }
 
 async function handleCustomerPortal(userId, data, supabase, stripe) {
-  console.log(`Creating customer portal session for user ${userId}`);
+  console.log(`[${requestId}] Creating customer portal session for user ${userId}`);
   
   // Get the customer ID from the payments table
   const { data: paymentData, error: paymentError } = await supabase

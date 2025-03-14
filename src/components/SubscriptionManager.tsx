@@ -99,7 +99,6 @@ export function SubscriptionManager() {
 
       const currentUrl = window.location.origin;
       
-      // Prepare request body with explicit endpoint
       const requestBody = {
         priceId: plan.stripePriceId,
         successUrl: currentUrl,
@@ -107,16 +106,16 @@ export function SubscriptionManager() {
         endpoint: "create-checkout-session"
       };
       
-      console.log("Sending request with body:", JSON.stringify(requestBody));
+      const bodyString = JSON.stringify(requestBody);
+      console.log("Sending request with body:", bodyString);
 
-      // Call the Stripe function with the properly formatted body
       const { data, error } = await supabase.functions.invoke('stripe', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
-        body: requestBody
+        body: bodyString
       });
       
       console.log("Response from Stripe function:", data, error);
@@ -295,7 +294,6 @@ export function SubscriptionManager() {
                   </ul>
                 </CardContent>
                 <CardFooter>
-                  {/* Show appropriate button based on plan status */}
                   {plan.id === 'basic' && !isPro ? (
                     <Button 
                       className="w-full" 
