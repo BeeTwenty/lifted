@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import Stripe from 'https://esm.sh/stripe@12.0.0?target=deno';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
@@ -276,6 +277,65 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({ 
             error: 'Error creating customer portal session',
+            details: stripeError.message
+          }),
+          { status: 500, headers: corsHeaders }
+        );
+      }
+    } else if (endpoint === 'subscription-info') {
+      try {
+        // Fetch active pro subscription price
+        console.log(`[${requestId}] Fetching subscription prices`);
+        
+        // Get the price for the pro plan - price_1R1vbRP6wHqHwKkzuGnmkQQk
+        const proPriceId = "price_1R1vbRP6wHqHwKkzuGnmkQQk";
+        const price = await stripe.prices.retrieve(proPriceId);
+        
+        // Get active subscription for this user if any
+        let activeSubscription = null;
+        if (userId) {
+          const { data: customers } = await stripe.customers.list({
+            email: `${userId}@example.com`,
+            limit: 1,
+          });
+          
+          if (customers && customers.length > 0) {
+            const customerId = customers[0].id;
+            const subscriptions = await stripe.subscriptions.list({
+              customer: customerId,
+              status: 'active',
+              limit: 1,
+            });
+            
+            if (subscriptions.data.length > 0) {
+              activeSubscription = subscriptions.data[0];
+            }
+          }
+        }
+        
+        // Return pricing information
+        result = {
+          prices: {
+            pro: {
+              amount: price.unit_amount,
+              currency: price.currency,
+              interval: price.recurring?.interval || 'month',
+              id: price.id
+            }
+          },
+          activeSubscription: activeSubscription ? {
+            id: activeSubscription.id,
+            status: activeSubscription.status,
+            currentPeriodEnd: activeSubscription.current_period_end,
+          } : null
+        };
+        
+        console.log(`[${requestId}] Returning subscription info:`, result);
+      } catch (stripeError) {
+        console.error(`[${requestId}] Stripe error fetching subscription info:`, stripeError);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Error fetching subscription info',
             details: stripeError.message
           }),
           { status: 500, headers: corsHeaders }

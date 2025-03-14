@@ -25,6 +25,41 @@ export const SubscriptionManager = () => {
     }
   });
 
+  // Fetch price information from Stripe
+  const { data: subscriptionInfo, isLoading: isPriceLoading } = useQuery({
+    queryKey: ["subscriptionInfo"],
+    queryFn: async () => {
+      return await profileService.getSubscriptionInfo();
+    }
+  });
+
+  // Format price for display
+  const formatPrice = (amount: number, currency: string) => {
+    const formatter = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency || 'usd',
+      minimumFractionDigits: 2
+    });
+    
+    return formatter.format(amount / 100);
+  };
+
+  // Get formatted price or default
+  const getProPrice = () => {
+    if (isPriceLoading) return "$7.99";
+    
+    const priceInfo = subscriptionInfo?.prices?.pro;
+    if (!priceInfo) return "$7.99";
+    
+    return `${formatPrice(priceInfo.amount, priceInfo.currency)}`;
+  };
+
+  // Get billing interval
+  const getBillingInterval = () => {
+    if (isPriceLoading) return "month";
+    return subscriptionInfo?.prices?.pro?.interval || "month";
+  };
+
   useEffect(() => {
     // Check for Stripe session ID in URL parameters
     const checkStripeSession = async () => {
@@ -256,10 +291,6 @@ export const SubscriptionManager = () => {
                 <XCircle className="h-4 w-4 text-gray-400 mr-2" />
                 <span className="text-gray-400">Advanced analytics</span>
               </li>
-              <li className="flex items-center">
-                <XCircle className="h-4 w-4 text-gray-400 mr-2" />
-                <span className="text-gray-400">Premium workouts</span>
-              </li>
             </ul>
           </CardContent>
           <CardFooter>
@@ -289,7 +320,13 @@ export const SubscriptionManager = () => {
             <CardDescription>Premium features for serious athletes</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold mb-4">$7.99 <span className="text-sm font-normal text-gray-500">/month</span></div>
+            <div className="text-2xl font-bold mb-4">
+              {isPriceLoading ? (
+                <span className="inline-block animate-pulse">Loading...</span>
+              ) : (
+                <>{getProPrice()} <span className="text-sm font-normal text-gray-500">/{getBillingInterval()}</span></>
+              )}
+            </div>
             <ul className="space-y-2">
               <li className="flex items-center">
                 <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
@@ -302,14 +339,6 @@ export const SubscriptionManager = () => {
               <li className="flex items-center">
                 <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
                 <span>Advanced analytics</span>
-              </li>
-              <li className="flex items-center">
-                <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                <span>Premium workouts</span>
-              </li>
-              <li className="flex items-center">
-                <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                <span>Priority support</span>
               </li>
               <li className="flex items-center">
                 <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
