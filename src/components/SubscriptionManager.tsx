@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,13 +5,13 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CreditCard, CheckCircle, XCircle, Shield, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { invokeStripeFunction } from "@/integrations/supabase/functions";
 
 export const SubscriptionManager = () => {
   const { toast } = useToast();
   const [status, setStatus] = useState<"basic" | "pro">("basic");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchSubscriptionStatus = async () => {
@@ -41,24 +40,31 @@ export const SubscriptionManager = () => {
   const handleSubscribe = async () => {
     setIsLoading(true);
     setError(null);
+    setDebugInfo(null);
     
     try {
       // Get the current URL for success and cancel URLs
       const baseUrl = window.location.origin;
       
+      // Correct price ID from your message
+      const priceId = "price_1R1vbRP6wHqHwKkzuGnmkQQk";
+      
       // Prepare the request payload
       const payload = {
-        priceId: "price_1RtvbRP6wHqHwKkzuGnmkQQk", // Replace with your actual price ID
+        priceId: priceId,
         successUrl: baseUrl,
         cancelUrl: baseUrl,
         endpoint: "create-checkout-session"
       };
       
-      console.log("Creating checkout session for price:", payload.priceId);
-      console.log("Stripe function request:", payload);
+      console.log("Creating checkout session for price:", priceId);
       
       // Get the current user's session
       const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error("You must be logged in to subscribe");
+      }
       
       // Call the Stripe function
       const response = await fetch(
@@ -73,9 +79,14 @@ export const SubscriptionManager = () => {
         }
       );
       
+      // Test connection by checking response status
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Error response from Stripe function:", errorText);
+        
+        // Save debug info
+        setDebugInfo(`Status: ${response.status}, Response: ${errorText}`);
+        
         try {
           const errorJson = JSON.parse(errorText);
           throw new Error(errorJson.error || errorJson.message || "Failed to create checkout session");
@@ -175,6 +186,14 @@ export const SubscriptionManager = () => {
           <XCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      
+      {debugInfo && (
+        <Alert className="bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800">
+          <Info className="h-4 w-4" />
+          <AlertTitle>Debug Information</AlertTitle>
+          <AlertDescription className="font-mono text-xs break-all">{debugInfo}</AlertDescription>
         </Alert>
       )}
       
@@ -310,6 +329,28 @@ export const SubscriptionManager = () => {
         <AlertTitle>Subscription Information</AlertTitle>
         <AlertDescription>
           Pro subscriptions give you access to all premium features. You can cancel anytime.
+        </AlertDescription>
+      </Alert>
+
+      <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
+        <Info className="h-4 w-4" />
+        <AlertTitle>Test Connection</AlertTitle>
+        <AlertDescription>
+          <p className="mb-2">If you're experiencing issues with Stripe integration, check that:</p>
+          <ul className="list-disc pl-5 space-y-1 text-sm">
+            <li>Your Stripe account is properly set up</li>
+            <li>The price ID exists in your Stripe dashboard</li>
+            <li>STRIPE_SECRET_KEY is correctly set in Supabase Edge Function secrets</li>
+          </ul>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="mt-3"
+            onClick={handleSubscribe}
+            disabled={isLoading}
+          >
+            Test Stripe Connection
+          </Button>
         </AlertDescription>
       </Alert>
     </div>

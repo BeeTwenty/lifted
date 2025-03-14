@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import Stripe from 'https://esm.sh/stripe@12.0.0?target=deno';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
@@ -66,6 +65,9 @@ serve(async (req) => {
         );
       }
       
+      // Log raw request body for debugging
+      console.log(`[${requestId}] Raw request body:`, bodyText);
+      
       // Now parse the JSON
       requestData = JSON.parse(bodyText);
       console.log(`[${requestId}] Parsed request data:`, requestData);
@@ -94,7 +96,10 @@ serve(async (req) => {
     if (!stripeSecretKey) {
       console.error(`[${requestId}] STRIPE_SECRET_KEY is not configured`);
       return new Response(
-        JSON.stringify({ error: "Stripe secret key is not configured" }),
+        JSON.stringify({ 
+          error: "Stripe secret key is not configured",
+          debug: "Check that the STRIPE_SECRET_KEY environment variable is set in Supabase Edge Function secrets"
+        }),
         { status: 500, headers: corsHeaders }
       );
     }
@@ -103,26 +108,26 @@ serve(async (req) => {
       apiVersion: '2023-10-16',
     });
 
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error(`[${requestId}] Supabase credentials not configured`);
-      return new Response(
-        JSON.stringify({ error: "Supabase credentials not configured" }),
-        { status: 500, headers: corsHeaders }
-      );
-    }
-    
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-
     // Get user id from JWT token
     let userId = null;
     const authHeader = req.headers.get('Authorization');
     
     if (authHeader && authHeader.startsWith('Bearer ')) {
       try {
+        // Initialize Supabase client
+        const supabaseUrl = Deno.env.get('SUPABASE_URL');
+        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+        
+        if (!supabaseUrl || !supabaseServiceKey) {
+          console.error(`[${requestId}] Supabase credentials not configured`);
+          return new Response(
+            JSON.stringify({ error: "Supabase credentials not configured" }),
+            { status: 500, headers: corsHeaders }
+          );
+        }
+        
+        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+        
         const jwt = authHeader.substring(7);
         const { data: { user }, error } = await supabaseAdmin.auth.getUser(jwt);
         
@@ -160,6 +165,27 @@ serve(async (req) => {
       }
       
       try {
+        // Validate price ID before proceeding
+        console.log(`[${requestId}] Validating price ID: ${requestData.priceId}`);
+        try {
+          // Test if price exists
+          const priceData = await stripe.prices.retrieve(requestData.priceId);
+          console.log(`[${requestId}] Price exists:`, priceData.id);
+        } catch (priceError) {
+          console.error(`[${requestId}] Invalid price ID:`, priceError.message);
+          return new Response(
+            JSON.stringify({ 
+              error: "Invalid price ID", 
+              details: priceError.message,
+              debug: {
+                priceId: requestData.priceId,
+                suggestion: "Check that this price ID exists in your Stripe account"
+              }
+            }),
+            { status: 400, headers: corsHeaders }
+          );
+        }
+        
         // Get or create customer by user_id
         const { data: existingCustomers } = await stripe.customers.list({
           email: `${userId}@example.com`, // Using user ID as an identifier
