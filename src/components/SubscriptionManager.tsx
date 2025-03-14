@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -99,6 +100,7 @@ export function SubscriptionManager() {
 
       const currentUrl = window.location.origin;
       
+      // Create request body as a plain object
       const requestBody = {
         priceId: plan.stripePriceId,
         successUrl: currentUrl,
@@ -106,24 +108,28 @@ export function SubscriptionManager() {
         endpoint: "create-checkout-session"
       };
       
-      console.log("Sending request with body:", JSON.stringify(requestBody));
+      console.log("Request body for Stripe function:", requestBody);
 
-      const { data, error } = await supabase.functions.invoke('stripe', {
+      // Use Fetch API directly for more control over the request
+      const response = await fetch(`${window.location.origin}/functions/v1/stripe`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
         },
-        body: requestBody
+        body: JSON.stringify(requestBody)
       });
       
-      console.log("Response from Stripe function:", data, error);
-      
-      if (error) {
-        console.error("Stripe function error:", error);
-        throw new Error(error.message || "Error creating checkout session");
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Error response from Stripe function:", response.status, errorText);
+        throw new Error(`Error ${response.status}: ${errorText || "Unknown error"}`);
       }
-
+      
+      const data = await response.json();
+      console.log("Response from Stripe function:", data);
+      
       if (!data || !data.url) {
         console.error("Invalid response from server:", data);
         throw new Error("Invalid response from server");
@@ -155,29 +161,34 @@ export function SubscriptionManager() {
 
       const currentUrl = window.location.origin;
       
+      // Create request body as a plain object
       const requestBody = {
         returnUrl: currentUrl,
         endpoint: 'customer-portal'
       };
       
-      console.log("Sending request for customer portal with body:", JSON.stringify(requestBody));
+      console.log("Request body for customer portal:", requestBody);
       
-      const { data, error } = await supabase.functions.invoke('stripe', {
+      // Use Fetch API directly for more control over the request
+      const response = await fetch(`${window.location.origin}/functions/v1/stripe`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
+          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
         },
-        body: requestBody
+        body: JSON.stringify(requestBody)
       });
       
-      console.log("Response from customer portal:", data, error);
-      
-      if (error) {
-        console.error("Customer portal error:", error);
-        throw new Error(error.message || "Error accessing customer portal");
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Error response from Stripe function:", response.status, errorText);
+        throw new Error(`Error ${response.status}: ${errorText || "Unknown error"}`);
       }
-
+      
+      const data = await response.json();
+      console.log("Response from customer portal:", data);
+      
       if (!data || !data.url) {
         throw new Error("Invalid response from server");
       }

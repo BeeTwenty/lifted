@@ -89,10 +89,22 @@ serve(async (req) => {
       );
     }
 
-    // Safe way to get request body as text first
+    // Check request body
+    if (req.body === null) {
+      console.error(`[${requestId}] Request body is null`);
+      return new Response(
+        JSON.stringify({ error: 'Request body is null' }),
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
+    // Clone the request to safely read the body multiple times if needed
+    const clonedReq = req.clone();
+    
+    // Read the request body as text
     let bodyText;
     try {
-      bodyText = await req.text();
+      bodyText = await clonedReq.text();
       console.log(`[${requestId}] Raw request body:`, bodyText);
       
       if (!bodyText || bodyText.trim() === '') {
@@ -212,8 +224,9 @@ async function handleCreateCheckoutSession(userId, data, supabase, stripe, reque
     console.log(`[${requestId}] Using existing Stripe customer:`, stripeCustomerId);
   } else {
     // Create a new customer
-    const { data: userData } = await supabase.auth.admin.getUserById(userId);
-    if (!userData || !userData.user || !userData.user.email) {
+    const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
+    if (userError || !userData || !userData.user || !userData.user.email) {
+      console.error(`[${requestId}] Error getting user data:`, userError);
       throw new Error('Unable to get user email');
     }
     
@@ -269,6 +282,7 @@ async function handleCustomerPortal(userId, data, supabase, stripe, requestId) {
     .limit(1);
 
   if (paymentError) {
+    console.error(`[${requestId}] Error getting payment data:`, paymentError);
     throw paymentError;
   }
   
@@ -312,6 +326,8 @@ async function handleWebhook(req, supabase, stripe, corsHeaders, requestId) {
   
   try {
     const body = await req.text();
+    console.log(`[${requestId}] Webhook body:`, body.substring(0, 200) + "...");
+    
     const event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
     console.log(`[${requestId}] Webhook event verified: ${event.type}`);
 
