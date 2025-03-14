@@ -110,12 +110,14 @@ export function SubscriptionManager() {
       };
       
       console.log("Request body for Stripe function:", requestBody);
-
       console.log("Using Supabase project URL:", api.baseUrl);
       
-      // Use Supabase functions.invoke with specific URL
+      // Use Supabase functions.invoke with explicit content type
       const { data, error } = await supabase.functions.invoke('stripe', {
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
+        headers: {
+          'Content-Type': 'application/json',
+        }
       });
       
       if (error) {
@@ -165,9 +167,12 @@ export function SubscriptionManager() {
       console.log("Request body for customer portal:", requestBody);
       console.log("Using Supabase project URL:", api.baseUrl);
       
-      // Use Supabase functions.invoke with specific URL
+      // Use Supabase functions.invoke with explicit content type
       const { data, error } = await supabase.functions.invoke('stripe', {
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
+        headers: {
+          'Content-Type': 'application/json',
+        }
       });
       
       if (error) {
