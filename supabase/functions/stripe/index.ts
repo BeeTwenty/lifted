@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import Stripe from 'https://esm.sh/stripe@12.0.0?target=deno';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
@@ -61,31 +62,45 @@ serve(async (req) => {
     const userId = user.id;
     console.log('Authenticated user:', userId);
 
-    // Extract request data - improved handling for empty bodies
+    // Extract request data - improved handling to avoid JSON parse errors
     let requestData = {};
     
     try {
-      // Check if the request has a body before trying to parse it
+      // Only attempt to parse JSON if the content-type is application/json
       const contentType = req.headers.get('content-type');
+      
       if (contentType && contentType.includes('application/json')) {
-        // Clone the request to avoid consuming the body
-        const clonedReq = req.clone();
-        const text = await clonedReq.text();
+        // Get the request body text
+        const text = await req.text();
         
-        // Only try to parse if there's content
-        if (text && text.trim()) {
-          requestData = JSON.parse(text);
-          console.log('Request body:', requestData);
+        console.log('Request body raw text:', text);
+        
+        // Only try to parse if there's actual content
+        if (text && text.trim().length > 0) {
+          try {
+            requestData = JSON.parse(text);
+            console.log('Parsed request body:', requestData);
+          } catch (parseError) {
+            console.error('JSON parse error:', parseError.message);
+            console.error('Failed to parse text:', text);
+            return new Response(
+              JSON.stringify({ error: `Invalid JSON format: ${parseError.message}` }),
+              { 
+                status: 400,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              }
+            );
+          }
         } else {
           console.log('Request body is empty, using empty object');
         }
       } else {
-        console.log('Request does not contain JSON, using empty object');
+        console.log('Request does not contain JSON content type:', contentType);
       }
     } catch (e) {
       console.error('Error processing request body:', e);
       return new Response(
-        JSON.stringify({ error: `Invalid request body: ${e.message}` }),
+        JSON.stringify({ error: `Request body processing error: ${e.message}` }),
         { 
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }

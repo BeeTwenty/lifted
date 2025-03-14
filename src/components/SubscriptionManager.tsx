@@ -98,7 +98,7 @@ export function SubscriptionManager() {
         throw new Error("No price ID available for this plan");
       }
       
-      // Create the checkout session with properly formatted request and headers
+      // Create a proper request body object
       const requestBody = {
         priceId: plan.stripePriceId,
         successUrl: window.location.origin,
@@ -107,6 +107,7 @@ export function SubscriptionManager() {
       
       console.log("Sending request with body:", JSON.stringify(requestBody));
 
+      // Make sure to include the Content-Type header
       const { data, error } = await supabase.functions.invoke("stripe/create-checkout-session", {
         method: 'POST',
         headers: {
@@ -156,7 +157,7 @@ export function SubscriptionManager() {
       
       console.log("Sending request with body:", JSON.stringify(requestBody));
       
-      // Use invoke method with a properly formatted body
+      // Make sure to include the Content-Type header
       const { data, error } = await supabase.functions.invoke("stripe/customer-portal", {
         method: 'POST',
         headers: {
