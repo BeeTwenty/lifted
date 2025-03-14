@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import Stripe from 'https://esm.sh/stripe@12.0.0?target=deno';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
@@ -62,19 +61,27 @@ serve(async (req) => {
     const userId = user.id;
     console.log('Authenticated user:', userId);
 
-    // Extract request data
-    let requestData;
+    // Extract request data - improved handling for empty bodies
+    let requestData = {};
     
     try {
-      // Clone the request to ensure we can read the body
-      const reqBody = await req.json();
-      console.log('Request body:', reqBody);
-      
-      if (!reqBody || typeof reqBody !== 'object') {
-        throw new Error('Invalid request body format');
+      // Check if the request has a body before trying to parse it
+      const contentType = req.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        // Clone the request to avoid consuming the body
+        const clonedReq = req.clone();
+        const text = await clonedReq.text();
+        
+        // Only try to parse if there's content
+        if (text && text.trim()) {
+          requestData = JSON.parse(text);
+          console.log('Request body:', requestData);
+        } else {
+          console.log('Request body is empty, using empty object');
+        }
+      } else {
+        console.log('Request does not contain JSON, using empty object');
       }
-      
-      requestData = reqBody;
     } catch (e) {
       console.error('Error processing request body:', e);
       return new Response(
@@ -90,10 +97,10 @@ serve(async (req) => {
     let result;
     switch (endpoint) {
       case 'create-checkout-session':
-        result = await handleCreateCheckoutSession(userId, requestData, supabaseAdmin, stripe);
+        result = await handleCreateCheckoutSession(userId, requestData, supabaseAdmin, stripe, url.origin);
         break;
       case 'customer-portal':
-        result = await handleCustomerPortal(userId, requestData, supabaseAdmin, stripe);
+        result = await handleCustomerPortal(userId, requestData, supabaseAdmin, stripe, url.origin);
         break;
       default:
         throw new Error('Invalid endpoint');
@@ -115,7 +122,7 @@ serve(async (req) => {
   }
 });
 
-async function handleCreateCheckoutSession(userId, data, supabase, stripe) {
+async function handleCreateCheckoutSession(userId, data, supabase, stripe, origin) {
   console.log(`Creating checkout session for user ${userId}`);
   console.log('Request data for checkout:', JSON.stringify(data));
   
@@ -174,8 +181,8 @@ async function handleCreateCheckoutSession(userId, data, supabase, stripe) {
   }
 
   // Create the checkout session
-  const successUrl = data.successUrl || new URL(req.url).origin;
-  const cancelUrl = data.cancelUrl || new URL(req.url).origin;
+  const successUrl = data.successUrl || origin;
+  const cancelUrl = data.cancelUrl || origin;
   
   console.log(`Success URL: ${successUrl}, Cancel URL: ${cancelUrl}`);
 
@@ -206,7 +213,7 @@ async function handleCreateCheckoutSession(userId, data, supabase, stripe) {
   }
 }
 
-async function handleCustomerPortal(userId, data, supabase, stripe) {
+async function handleCustomerPortal(userId, data, supabase, stripe, origin) {
   console.log(`Creating customer portal session for user ${userId}`);
   console.log('Request data for customer portal:', JSON.stringify(data));
   
@@ -231,7 +238,7 @@ async function handleCustomerPortal(userId, data, supabase, stripe) {
   const stripeCustomerId = paymentData[0].stripe_customer_id;
   console.log('Using customer portal for:', stripeCustomerId);
 
-  const returnUrl = data.returnUrl || new URL(req.url).origin;
+  const returnUrl = data.returnUrl || origin;
   console.log('Return URL:', returnUrl);
   
   // Create a billing portal session

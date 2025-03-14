@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -97,18 +98,22 @@ export function SubscriptionManager() {
         throw new Error("No price ID available for this plan");
       }
       
-      // Create the checkout session with properly formatted request
+      // Create the checkout session with properly formatted request and headers
+      const requestBody = {
+        priceId: plan.stripePriceId,
+        successUrl: window.location.origin,
+        cancelUrl: window.location.origin,
+      };
+      
+      console.log("Sending request with body:", JSON.stringify(requestBody));
+
       const { data, error } = await supabase.functions.invoke("stripe/create-checkout-session", {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${sessionAuth.session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: {
-          priceId: plan.stripePriceId,
-          successUrl: window.location.origin,
-          cancelUrl: window.location.origin,
-        },
+        body: requestBody,
       });
       
       if (error) {
@@ -148,6 +153,8 @@ export function SubscriptionManager() {
       const requestBody = {
         returnUrl: window.location.origin
       };
+      
+      console.log("Sending request with body:", JSON.stringify(requestBody));
       
       // Use invoke method with a properly formatted body
       const { data, error } = await supabase.functions.invoke("stripe/customer-portal", {
