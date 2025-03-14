@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -95,25 +94,21 @@ export function SubscriptionManager() {
       if (!plan.stripePriceId) {
         throw new Error("No price ID available for this plan");
       }
+
+      const currentUrl = window.location.origin;
       
       const requestBody = {
         priceId: plan.stripePriceId,
-        successUrl: window.location.origin,
-        cancelUrl: window.location.origin,
+        successUrl: currentUrl,
+        cancelUrl: currentUrl,
+        endpoint: "create-checkout-session"
       };
       
       console.log("Sending request with body:", JSON.stringify(requestBody));
 
-      // Call the 'stripe' function with the 'create-checkout-session' endpoint
       const { data, error } = await supabase.functions.invoke('stripe', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: {
-          ...requestBody,
-          endpoint: 'create-checkout-session'
-        },
+        body: requestBody
       });
       
       console.log("Response from edge function:", data, error);
@@ -150,20 +145,18 @@ export function SubscriptionManager() {
       const { data: sessionAuth } = await supabase.auth.getSession();
       if (!sessionAuth.session) throw new Error("No active session");
 
+      const currentUrl = window.location.origin;
+      
       const requestBody = {
-        returnUrl: window.location.origin,
+        returnUrl: currentUrl,
         endpoint: 'customer-portal'
       };
       
       console.log("Sending request to customer portal with body:", JSON.stringify(requestBody));
       
-      // Call the 'stripe' function with the 'customer-portal' endpoint
       const { data, error } = await supabase.functions.invoke('stripe', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: requestBody,
+        body: requestBody
       });
       
       console.log("Response from customer portal:", data, error);

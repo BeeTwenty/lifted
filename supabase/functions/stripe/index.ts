@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import Stripe from 'https://esm.sh/stripe@12.0.0?target=deno';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
@@ -62,8 +63,22 @@ serve(async (req) => {
     // Parse the request body
     let requestData;
     try {
-      requestData = await req.json();
-      console.log('Request body:', JSON.stringify(requestData));
+      const bodyText = await req.text();
+      console.log('Raw request body:', bodyText);
+      
+      if (!bodyText || bodyText.trim() === '') {
+        console.error('Empty request body');
+        throw new Error('Empty request body');
+      }
+      
+      try {
+        requestData = JSON.parse(bodyText);
+      } catch (parseError) {
+        console.error('Error parsing JSON:', parseError);
+        throw new Error(`Invalid JSON format: ${parseError.message}`);
+      }
+      
+      console.log('Parsed request body:', JSON.stringify(requestData));
       
       // Check if body is empty or not an object
       if (!requestData || typeof requestData !== 'object') {
@@ -71,9 +86,9 @@ serve(async (req) => {
         throw new Error('Invalid request data format');
       }
     } catch (error) {
-      console.error('Error parsing request body:', error);
+      console.error('Error handling request body:', error);
       return new Response(
-        JSON.stringify({ error: 'Error parsing request body', details: error.message }),
+        JSON.stringify({ error: 'Error handling request body', details: error.message }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -105,7 +120,7 @@ serve(async (req) => {
         result = await handleCustomerPortal(userId, requestData, supabaseAdmin, stripe, url.origin);
         break;
       default:
-        throw new Error('Invalid endpoint');
+        throw new Error(`Invalid endpoint: ${endpoint}`);
     }
 
     return new Response(JSON.stringify(result), {
