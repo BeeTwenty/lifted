@@ -15,6 +15,9 @@ serve(async (req) => {
   const requestId = crypto.randomUUID();
   console.log(`[${requestId}] Request received: ${req.method} ${req.url}`);
   
+  // Log all request headers for debugging
+  console.log(`[${requestId}] Request headers:`, Object.fromEntries([...req.headers.entries()]));
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     console.log(`[${requestId}] Handling CORS preflight request`);
@@ -31,8 +34,17 @@ serve(async (req) => {
   }
 
   try {
-    // Log all request headers for debugging
-    console.log(`[${requestId}] Request headers:`, Object.fromEntries([...req.headers.entries()]));
+    // Check Content-Type header - this is critical
+    const contentType = req.headers.get('Content-Type');
+    console.log(`[${requestId}] Content-Type header:`, contentType);
+    
+    if (!contentType || !contentType.includes('application/json')) {
+      console.error(`[${requestId}] Invalid Content-Type: ${contentType}`);
+      return new Response(
+        JSON.stringify({ error: `Invalid Content-Type: ${contentType}. Expected application/json` }),
+        { status: 400, headers: corsHeaders }
+      );
+    }
     
     // Initialize Stripe
     const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
@@ -68,31 +80,13 @@ serve(async (req) => {
       return await handleWebhook(req, supabaseAdmin, stripe, corsHeaders, requestId);
     }
 
-    // Check Content-Type header
-    const contentType = req.headers.get('Content-Type');
-    console.log(`[${requestId}] Content-Type header:`, contentType);
-    
-    if (!contentType || !contentType.includes('application/json')) {
-      console.error(`[${requestId}] Invalid Content-Type: ${contentType}`);
-      return new Response(
-        JSON.stringify({ error: 'Content-Type must be application/json' }),
-        { status: 400, headers: corsHeaders }
-      );
-    }
-
-    // For all other endpoints, verify authentication - commenting out for testing
-    // Using the JSON body to extract the session token since header auth might be failing
-    
-    // Clone the request to safely read the body
-    const clonedReq = req.clone();
-    
-    // Read the request body as text
-    let bodyText;
+    // Try to read and parse the request body
+    let requestText;
     try {
-      bodyText = await clonedReq.text();
-      console.log(`[${requestId}] Raw request body:`, bodyText);
+      requestText = await req.text();
+      console.log(`[${requestId}] Raw request body (first 500 chars):`, requestText.substring(0, 500));
       
-      if (!bodyText || bodyText.trim() === '') {
+      if (!requestText || requestText.trim() === '') {
         console.error(`[${requestId}] Request body is empty`);
         return new Response(
           JSON.stringify({ error: 'Request body is empty' }),
@@ -102,7 +96,7 @@ serve(async (req) => {
     } catch (bodyError) {
       console.error(`[${requestId}] Error reading request body:`, bodyError);
       return new Response(
-        JSON.stringify({ error: 'Failed to read request body' }),
+        JSON.stringify({ error: `Failed to read request body: ${bodyError.message}` }),
         { status: 400, headers: corsHeaders }
       );
     }
@@ -110,12 +104,16 @@ serve(async (req) => {
     // Try to parse the JSON body
     let requestData;
     try {
-      requestData = JSON.parse(bodyText);
+      requestData = JSON.parse(requestText);
       console.log(`[${requestId}] Parsed request data:`, requestData);
     } catch (parseError) {
       console.error(`[${requestId}] Error parsing JSON:`, parseError);
       return new Response(
-        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        JSON.stringify({ 
+          error: 'Invalid JSON in request body',
+          details: parseError.message,
+          receivedText: requestText.substring(0, 200) // Show part of what was received
+        }),
         { status: 400, headers: corsHeaders }
       );
     }
@@ -124,22 +122,6 @@ serve(async (req) => {
     // In production, this should be restored to use proper authentication
     const userId = "test-user-id"; // Temporary for testing
     console.log(`[${requestId}] Using test user ID:`, userId);
-
-    /*
-    // Verify the user token
-    try {
-      const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-      if (authError || !user) {
-        console.error(`[${requestId}] Auth error:`, authError);
-        return new Response(
-          JSON.stringify({ error: 'Invalid token or user not found' }),
-          { status: 401, headers: corsHeaders }
-        );
-      }
-
-      const userId = user.id;
-      console.log(`[${requestId}] Authenticated user:`, userId);
-    */
 
     // Determine which endpoint to use
     const endpoint = requestData?.endpoint || 'create-checkout-session';
@@ -176,19 +158,13 @@ serve(async (req) => {
       JSON.stringify(result),
       { status: 200, headers: corsHeaders }
     );
-    /*
-    } catch (error) {
-      console.error(`[${requestId}] Authentication error:`, error);
-      return new Response(
-        JSON.stringify({ error: 'Authentication failed' }),
-        { status: 401, headers: corsHeaders }
-      );
-    }
-    */
   } catch (error) {
     console.error(`[${requestId}] Unhandled error:`, error);
     return new Response(
-      JSON.stringify({ error: error.message || 'Unknown error occurred' }),
+      JSON.stringify({ 
+        error: error.message || 'Unknown error occurred',
+        stack: error.stack, // Include stack trace for debugging
+      }),
       { status: 500, headers: corsHeaders }
     );
   }

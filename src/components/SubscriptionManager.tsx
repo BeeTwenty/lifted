@@ -101,7 +101,7 @@ export function SubscriptionManager() {
 
       const currentUrl = window.location.origin;
       
-      // Create request body as a plain object
+      // Create request body
       const requestBody = {
         priceId: plan.stripePriceId,
         successUrl: currentUrl,
@@ -112,7 +112,10 @@ export function SubscriptionManager() {
       console.log("Request body for Stripe function:", requestBody);
       console.log("Using Supabase project URL:", api.baseUrl);
       
-      // Use Supabase functions.invoke with explicit content type
+      // Add more detailed logging
+      console.log("Invoking Stripe function with explicit Content-Type");
+      
+      // Use Supabase functions.invoke with explicit stringification and content type
       const { data, error } = await supabase.functions.invoke('stripe', {
         body: JSON.stringify(requestBody),
         headers: {
@@ -158,7 +161,7 @@ export function SubscriptionManager() {
 
       const currentUrl = window.location.origin;
       
-      // Create request body as a plain object
+      // Create request body
       const requestBody = {
         returnUrl: currentUrl,
         endpoint: 'customer-portal'
@@ -167,7 +170,10 @@ export function SubscriptionManager() {
       console.log("Request body for customer portal:", requestBody);
       console.log("Using Supabase project URL:", api.baseUrl);
       
-      // Use Supabase functions.invoke with explicit content type
+      // Add more detailed logging
+      console.log("Invoking Stripe function for customer portal with explicit Content-Type");
+      
+      // Use Supabase functions.invoke with explicit stringification and content type
       const { data, error } = await supabase.functions.invoke('stripe', {
         body: JSON.stringify(requestBody),
         headers: {
