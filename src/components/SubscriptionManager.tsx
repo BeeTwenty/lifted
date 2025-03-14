@@ -1,352 +1,317 @@
 
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Shield, Check, Gem, AlertTriangle } from "lucide-react";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { CreditCard, CheckCircle, XCircle, Shield, Info } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { UserProfile, SubscriptionPlan } from "@/types/workout";
-import { api } from "@/api/config";
+import { invokeStripeFunction } from "@/integrations/supabase/functions";
 
-// Subscription plan definitions
-const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
-  {
-    id: "basic",
-    name: "Basic",
-    description: "Free access to core workout features",
-    price: 0,
-    currency: "USD",
-    interval: "month",
-    features: [
-      "Unlimited workout routines",
-      "Exercise library",
-      "Basic workout tracking",
-    ],
-    stripeProductId: "",
-    stripePriceId: "",
-  },
-  {
-    id: "pro",
-    name: "Pro",
-    description: "Enhanced features for serious athletes",
-    price: 15.00,
-    currency: "NOK",
-    interval: "month",
-    features: [
-      "All Basic features",
-      "Detailed weight tracking",
-      "Advanced workout statistics",
-      "Progress analytics",
-      "Priority support",
-    ],
-    stripeProductId: "prod_RvnBPKw0MzYleJ",
-    stripePriceId: "price_1RtvbRP6wHqHwKkzuGnmkQQk",
-  }
-];
-
-export function SubscriptionManager() {
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const [manageLoading, setManageLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+export const SubscriptionManager = () => {
   const { toast } = useToast();
+  const [status, setStatus] = useState<"basic" | "pro">("basic");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchUserProfile();
+    const fetchSubscriptionStatus = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("status")
+          .eq("id", user.id)
+          .single();
+
+        if (error) throw error;
+        if (data && data.status) {
+          setStatus(data.status as "basic" | "pro");
+        }
+      } catch (error: any) {
+        console.error("Error fetching subscription status:", error);
+      }
+    };
+
+    fetchSubscriptionStatus();
   }, []);
 
-  const fetchUserProfile = async () => {
+  const handleSubscribe = async () => {
+    setIsLoading(true);
+    setError(null);
+    
     try {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: profile, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-
-      if (error) throw error;
-      setUserProfile(profile);
-    } catch (error: any) {
-      console.error("Error fetching user profile:", error.message);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Could not load your subscription information",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCheckout = async (plan: SubscriptionPlan) => {
-    try {
-      setCheckoutLoading(true);
-      setErrorMessage(null);
+      // Get the current URL for success and cancel URLs
+      const baseUrl = window.location.origin;
       
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error("You must be logged in to upgrade your subscription");
-      }
-
-      console.log("Creating checkout session for price:", plan.stripePriceId);
-      
-      if (!plan.stripePriceId) {
-        throw new Error("No price ID available for this plan");
-      }
-
-      const currentUrl = window.location.origin;
-      
-      // Create request body
-      const requestBody = {
-        priceId: plan.stripePriceId,
-        successUrl: currentUrl,
-        cancelUrl: currentUrl,
+      // Prepare the request payload
+      const payload = {
+        priceId: "price_1RtvbRP6wHqHwKkzuGnmkQQk", // Replace with your actual price ID
+        successUrl: baseUrl,
+        cancelUrl: baseUrl,
         endpoint: "create-checkout-session"
       };
       
-      console.log("Stripe function request:", requestBody);
+      console.log("Creating checkout session for price:", payload.priceId);
+      console.log("Stripe function request:", payload);
       
-      // Call Supabase Edge Function with explicit headers
-      const { data, error } = await supabase.functions.invoke('stripe', {
-        body: requestBody,
-        headers: {
-          // Include the session token for authentication
-          Authorization: `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
+      // Get the current user's session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // Call the Stripe function
+      const response = await fetch(
+        `${supabase.supabaseUrl}/functions/v1/stripe`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token || ''}`,
+          },
+          body: JSON.stringify(payload),
         }
-      });
+      );
       
-      if (error) {
-        console.error("Error invoking Stripe function:", error);
-        throw new Error(`Error: ${error.message || "Unknown error"}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Error response from Stripe function:", errorText);
+        try {
+          const errorJson = JSON.parse(errorText);
+          throw new Error(errorJson.error || errorJson.message || "Failed to create checkout session");
+        } catch (parseError) {
+          throw new Error(`Status ${response.status}: ${errorText || "Failed to create checkout session"}`);
+        }
       }
       
-      console.log("Stripe function response:", data);
+      const data = await response.json();
+      console.log("Checkout session created:", data);
       
-      if (!data || !data.url) {
-        console.error("Invalid response from server:", data);
-        throw new Error("Invalid response from server");
+      // Redirect to Stripe Checkout
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL returned from Stripe");
       }
-
-      console.log("Redirecting to checkout URL:", data.url);
-      window.location.href = data.url;
     } catch (error: any) {
       console.error("Error creating checkout session:", error);
-      setErrorMessage(error.message);
+      setError(error.message || "Failed to start subscription process");
+      
       toast({
         variant: "destructive",
-        title: "Checkout Error",
-        description: error.message,
+        title: "Subscription Error",
+        description: error.message || "Failed to start subscription process",
       });
     } finally {
-      setCheckoutLoading(false);
+      setIsLoading(false);
     }
   };
 
   const handleManageSubscription = async () => {
+    setIsLoading(true);
+    setError(null);
+    
     try {
-      setManageLoading(true);
+      const baseUrl = window.location.origin;
       
+      // Get the current user's session
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error("You must be logged in to manage your subscription");
-      }
-
-      const currentUrl = window.location.origin;
       
-      // Create request body
-      const requestBody = {
-        returnUrl: currentUrl,
-        endpoint: 'customer-portal'
-      };
-      
-      console.log("Customer portal request:", requestBody);
-      
-      // Call Supabase Edge Function with explicit headers
-      const { data, error } = await supabase.functions.invoke('stripe', {
-        body: requestBody,
-        headers: {
-          // Include the session token for authentication
-          Authorization: `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
+      // Call the Stripe customer portal endpoint
+      const response = await fetch(
+        `${supabase.supabaseUrl}/functions/v1/stripe`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token || ''}`,
+          },
+          body: JSON.stringify({
+            returnUrl: baseUrl,
+            endpoint: "customer-portal"
+          }),
         }
-      });
+      );
       
-      if (error) {
-        console.error("Error accessing customer portal:", error);
-        throw new Error(`Error: ${error.message || "Unknown error"}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Error response from Stripe function:", errorText);
+        try {
+          const errorJson = JSON.parse(errorText);
+          throw new Error(errorJson.error || errorJson.message || "Failed to access customer portal");
+        } catch (parseError) {
+          throw new Error(`Status ${response.status}: ${errorText || "Failed to access customer portal"}`);
+        }
       }
       
-      console.log("Customer portal response:", data);
+      const data = await response.json();
       
-      if (!data || !data.url) {
-        throw new Error("Invalid response from server");
+      // Redirect to customer portal
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No portal URL returned from Stripe");
       }
-
-      window.location.href = data.url;
     } catch (error: any) {
       console.error("Error accessing customer portal:", error);
+      setError(error.message || "Failed to access subscription management");
+      
       toast({
         variant: "destructive",
-        title: "Error",
-        description: error.message,
+        title: "Subscription Management Error",
+        description: error.message || "Failed to access subscription management",
       });
     } finally {
-      setManageLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const isPro = userProfile?.status === "pro";
-  const currentPlan = SUBSCRIPTION_PLANS.find(plan => plan.id === (isPro ? "pro" : "basic"));
-
-  if (loading) {
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Shield className="mr-2 h-5 w-5" />
-            Subscription
-          </CardTitle>
-          <CardDescription>Manage your subscription plan</CardDescription>
-        </CardHeader>
-        <CardContent className="flex justify-center py-6">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center">
-          <Shield className="mr-2 h-5 w-5" />
-          Subscription
-        </CardTitle>
-        <CardDescription>Manage your subscription plan</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Current Plan</p>
-              <div className="flex items-center">
-                <h3 className="text-2xl font-bold">{currentPlan?.name}</h3>
-                {isPro && (
-                  <Badge className="ml-2 bg-gradient-to-r from-indigo-500 to-purple-500">
-                    <Gem className="mr-1 h-3 w-3" />
-                    PRO
-                  </Badge>
-                )}
+    <div className="space-y-6 py-4">
+      <h2 className="text-2xl font-semibold mb-4 dark:text-white">Subscription Management</h2>
+      
+      {error && (
+        <Alert variant="destructive">
+          <XCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className={`${status === "basic" ? "border-primary" : ""}`}>
+          <CardHeader>
+            <CardTitle>Basic Plan</CardTitle>
+            <CardDescription>Free tier with core workout features</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold mb-4">$0 <span className="text-sm font-normal text-gray-500">/month</span></div>
+            <ul className="space-y-2">
+              <li className="flex items-center">
+                <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                <span>Create custom workouts</span>
+              </li>
+              <li className="flex items-center">
+                <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                <span>Track workout history</span>
+              </li>
+              <li className="flex items-center">
+                <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                <span>Exercise library</span>
+              </li>
+              <li className="flex items-center">
+                <XCircle className="h-4 w-4 text-gray-400 mr-2" />
+                <span className="text-gray-400">Weight tracking</span>
+              </li>
+              <li className="flex items-center">
+                <XCircle className="h-4 w-4 text-gray-400 mr-2" />
+                <span className="text-gray-400">Advanced analytics</span>
+              </li>
+              <li className="flex items-center">
+                <XCircle className="h-4 w-4 text-gray-400 mr-2" />
+                <span className="text-gray-400">Premium workouts</span>
+              </li>
+            </ul>
+          </CardContent>
+          <CardFooter>
+            {status === "basic" ? (
+              <div className="bg-primary/10 text-primary w-full py-2 rounded-lg text-center font-medium">
+                Current Plan
               </div>
-            </div>
-            {isPro && (
+            ) : (
               <Button 
                 variant="outline" 
+                className="w-full"
                 onClick={handleManageSubscription}
-                disabled={manageLoading}
+                disabled={isLoading}
               >
-                {manageLoading ? "Loading..." : "Manage Subscription"}
+                Downgrade
               </Button>
             )}
-          </div>
+          </CardFooter>
+        </Card>
 
-          {errorMessage && (
-            <div className="rounded-md bg-destructive/15 p-4">
-              <div className="flex">
-                <AlertTriangle className="h-5 w-5 text-destructive mr-2" />
-                <div>
-                  <h3 className="text-sm font-medium text-destructive">Checkout Error</h3>
-                  <p className="mt-1 text-sm text-destructive/90">{errorMessage}</p>
-                </div>
-              </div>
+        <Card className={`${status === "pro" ? "border-primary" : ""} bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-800`}>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle>Pro Plan</CardTitle>
+              <Shield className="h-5 w-5 text-primary" />
             </div>
-          )}
-
-          <Separator />
-
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            {SUBSCRIPTION_PLANS.map((plan) => (
-              <Card key={plan.id} className={`overflow-hidden ${plan.id === 'pro' ? 'border-primary' : ''}`}>
-                {plan.id === 'pro' && (
-                  <div className="bg-primary py-1 text-center text-xs font-medium uppercase text-primary-foreground">
-                    Recommended
-                  </div>
+            <CardDescription>Premium features for serious athletes</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold mb-4">$7.99 <span className="text-sm font-normal text-gray-500">/month</span></div>
+            <ul className="space-y-2">
+              <li className="flex items-center">
+                <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                <span>All Basic features</span>
+              </li>
+              <li className="flex items-center">
+                <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                <span>Weight tracking</span>
+              </li>
+              <li className="flex items-center">
+                <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                <span>Advanced analytics</span>
+              </li>
+              <li className="flex items-center">
+                <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                <span>Premium workouts</span>
+              </li>
+              <li className="flex items-center">
+                <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                <span>Priority support</span>
+              </li>
+              <li className="flex items-center">
+                <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                <span>No advertisements</span>
+              </li>
+            </ul>
+          </CardContent>
+          <CardFooter>
+            {status === "pro" ? (
+              <Button 
+                className="w-full" 
+                variant="outline"
+                onClick={handleManageSubscription}
+                disabled={isLoading}
+              >
+                <CreditCard className="h-4 w-4 mr-2" />
+                Manage Subscription
+              </Button>
+            ) : (
+              <Button 
+                className="w-full" 
+                onClick={handleSubscribe}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <span className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Processing...
+                  </span>
+                ) : (
+                  <>
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Upgrade to Pro
+                  </>
                 )}
-                <CardHeader>
-                  <CardTitle>{plan.name}</CardTitle>
-                  <CardDescription>{plan.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="mb-4">
-                    <span className="text-3xl font-bold">{plan.price > 0 ? `${plan.price} ${plan.currency}` : "$0"}</span>
-                    {plan.price > 0 && (
-                      <span className="text-muted-foreground">/{plan.interval}</span>
-                    )}
-                  </div>
-                  <ul className="space-y-2 text-sm">
-                    {plan.features.map((feature, i) => (
-                      <li key={i} className="flex items-center">
-                        <Check className="mr-2 h-4 w-4 text-green-500" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-                <CardFooter>
-                  {plan.id === 'basic' && !isPro ? (
-                    <Button 
-                      className="w-full" 
-                      variant="outline"
-                      disabled={true}
-                    >
-                      Current Plan
-                    </Button>
-                  ) : plan.id === 'pro' && isPro ? (
-                    <Button 
-                      className="w-full" 
-                      variant="outline" 
-                      disabled={true}
-                    >
-                      Current Plan
-                    </Button>
-                  ) : plan.id === 'pro' && !isPro ? (
-                    <Button 
-                      className="w-full" 
-                      onClick={() => handleCheckout(plan)}
-                      disabled={checkoutLoading}
-                    >
-                      {checkoutLoading ? "Processing..." : "Upgrade to Pro"}
-                    </Button>
-                  ) : null}
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-
-          {!isPro && (
-            <div className="rounded-md bg-amber-50 dark:bg-amber-950 p-4 mt-4">
-              <div className="flex">
-                <AlertTriangle className="h-5 w-5 text-amber-500 mr-2" />
-                <div>
-                  <h3 className="text-sm font-medium text-amber-800 dark:text-amber-300">
-                    Pro features are restricted
-                  </h3>
-                  <p className="mt-1 text-sm text-amber-700 dark:text-amber-400">
-                    Upgrade to Pro to unlock weight tracking and detailed workout statistics.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+              </Button>
+            )}
+          </CardFooter>
+        </Card>
+      </div>
+      
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertTitle>Subscription Information</AlertTitle>
+        <AlertDescription>
+          Pro subscriptions give you access to all premium features. You can cancel anytime.
+        </AlertDescription>
+      </Alert>
+    </div>
   );
-}
+};

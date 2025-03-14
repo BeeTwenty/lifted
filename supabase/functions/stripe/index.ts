@@ -51,7 +51,23 @@ serve(async (req) => {
     // Parse request body
     let requestData;
     try {
-      requestData = await req.json();
+      // Check if the request body is empty
+      const clonedReq = req.clone();
+      const bodyText = await clonedReq.text();
+      
+      if (!bodyText || bodyText.trim() === '') {
+        console.error(`[${requestId}] Empty request body`);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Empty request body',
+            message: 'Request body cannot be empty' 
+          }),
+          { status: 400, headers: corsHeaders }
+        );
+      }
+      
+      // Now parse the JSON
+      requestData = JSON.parse(bodyText);
       console.log(`[${requestId}] Parsed request data:`, requestData);
     } catch (parseError) {
       console.error(`[${requestId}] Error parsing JSON:`, parseError);
@@ -102,8 +118,6 @@ serve(async (req) => {
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get user id from JWT token
-    // For testing, using a fixed user ID
-    // In production, this should come from the authenticated session
     let userId = null;
     const authHeader = req.headers.get('Authorization');
     
