@@ -1,3 +1,4 @@
+
 import { Card } from "@/components/ui/card";
 import { Activity, Timer, Flame, Calendar, Lock, CreditCard } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -20,7 +21,7 @@ export function WorkoutStats() {
   const { isProSubscriber } = useAuth();
 
   // Fetch user profile and workout stats
-  const { data: userStats } = useQuery({
+  const { data: userStats, isLoading } = useQuery({
     queryKey: ["workoutStats"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -73,19 +74,10 @@ export function WorkoutStats() {
         weeklyStreak
       };
     },
-    enabled: isProSubscriber, // Only fetch data if user is Pro
+    enabled: true, // Always fetch data regardless of Pro status
   });
 
-  const workoutGoal = userStats?.workoutGoal || 5;
-  const hourGoal = userStats?.hourGoal || 10;
-  
-  const workoutProgress = Math.min(((userStats?.totalWorkouts || 0) / workoutGoal) * 100, 100);
-  const workoutsRemaining = Math.max(workoutGoal - (userStats?.totalWorkouts || 0), 0);
-
-  const hourProgress = Math.min(((userStats?.totalHours || 0) / hourGoal) * 100, 100);
-  const hoursRemaining = Math.max(hourGoal - (userStats?.totalHours || 0), 0);
-
-  // If not pro, show pro upgrade message
+  // If not a pro subscriber, show the upgrade message
   if (!isProSubscriber) {
     return (
       <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
@@ -108,6 +100,23 @@ export function WorkoutStats() {
       </div>
     );
   }
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
+
+  const workoutGoal = userStats?.workoutGoal || 5;
+  const hourGoal = userStats?.hourGoal || 10;
+  
+  const workoutProgress = Math.min(((userStats?.totalWorkouts || 0) / workoutGoal) * 100, 100);
+  const workoutsRemaining = Math.max(workoutGoal - (userStats?.totalWorkouts || 0), 0);
+
+  const hourProgress = Math.min(((userStats?.totalHours || 0) / hourGoal) * 100, 100);
+  const hoursRemaining = Math.max(hourGoal - (userStats?.totalHours || 0), 0);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
