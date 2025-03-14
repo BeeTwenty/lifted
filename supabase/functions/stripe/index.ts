@@ -16,9 +16,6 @@ serve(async (req) => {
   const requestId = crypto.randomUUID();
   console.log(`[${requestId}] Request received: ${req.method} ${req.url}`);
   
-  // Log all request headers for debugging
-  console.log(`[${requestId}] Request headers:`, Object.fromEntries([...req.headers.entries()]));
-  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     console.log(`[${requestId}] Handling CORS preflight request`);
@@ -35,39 +32,42 @@ serve(async (req) => {
   }
 
   try {
-    // Try to read and parse the request body
-    let requestText;
-    try {
-      requestText = await req.text();
-      console.log(`[${requestId}] Raw request body:`, requestText);
-      
-      if (!requestText || requestText.trim() === '') {
-        console.error(`[${requestId}] Request body is empty`);
-        return new Response(
-          JSON.stringify({ error: 'Request body is empty' }),
-          { status: 400, headers: corsHeaders }
-        );
-      }
-    } catch (bodyError) {
-      console.error(`[${requestId}] Error reading request body:`, bodyError);
+    // Verify Content-Type header
+    const contentType = req.headers.get('content-type');
+    console.log(`[${requestId}] Content-Type header: ${contentType}`);
+    
+    if (!contentType || !contentType.includes('application/json')) {
+      console.error(`[${requestId}] Invalid Content-Type: ${contentType}`);
       return new Response(
-        JSON.stringify({ error: `Failed to read request body: ${bodyError.message}` }),
+        JSON.stringify({ 
+          error: 'Invalid Content-Type',
+          message: 'Content-Type must be application/json',
+          received: contentType || 'none' 
+        }),
         { status: 400, headers: corsHeaders }
       );
     }
     
-    // Try to parse the JSON body
+    // Parse request body
     let requestData;
     try {
-      requestData = JSON.parse(requestText);
+      requestData = await req.json();
       console.log(`[${requestId}] Parsed request data:`, requestData);
     } catch (parseError) {
       console.error(`[${requestId}] Error parsing JSON:`, parseError);
+      
+      // Try to read the raw body for debugging
+      try {
+        const rawBody = await req.text();
+        console.error(`[${requestId}] Raw request body:`, rawBody);
+      } catch (rawError) {
+        console.error(`[${requestId}] Could not read raw body:`, rawError);
+      }
+      
       return new Response(
         JSON.stringify({ 
-          error: 'Invalid JSON in request body',
-          details: parseError.message,
-          receivedText: requestText.substring(0, 200) // Show part of what was received
+          error: 'Invalid JSON',
+          details: parseError.message
         }),
         { status: 400, headers: corsHeaders }
       );
@@ -88,8 +88,8 @@ serve(async (req) => {
     });
 
     // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
     if (!supabaseUrl || !supabaseServiceKey) {
       console.error(`[${requestId}] Supabase credentials not configured`);
@@ -101,14 +101,37 @@ serve(async (req) => {
     
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    // We'll bypass authentication temporarily for testing
-    // In production, this should use proper authentication
-    const userId = "test-user-id"; // For testing only
-    console.log(`[${requestId}] Using test user ID:`, userId);
+    // Get user id from JWT token
+    // For testing, using a fixed user ID
+    // In production, this should come from the authenticated session
+    let userId = null;
+    const authHeader = req.headers.get('Authorization');
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const jwt = authHeader.substring(7);
+        const { data: { user }, error } = await supabaseAdmin.auth.getUser(jwt);
+        
+        if (error) {
+          console.error(`[${requestId}] JWT validation error:`, error.message);
+        } else if (user) {
+          userId = user.id;
+          console.log(`[${requestId}] Authenticated user ID:`, userId);
+        }
+      } catch (authError) {
+        console.error(`[${requestId}] Error validating JWT:`, authError);
+      }
+    }
+    
+    // Fallback to test user ID if authentication failed
+    if (!userId) {
+      userId = "test-user-id";
+      console.log(`[${requestId}] Using test user ID for development:`, userId);
+    }
 
     // Handle different endpoints
     const endpoint = requestData?.endpoint || 'create-checkout-session';
-    console.log(`[${requestId}] Using endpoint: ${endpoint}`);
+    console.log(`[${requestId}] Processing endpoint: ${endpoint}`);
     
     let result;
     
@@ -123,17 +146,33 @@ serve(async (req) => {
       }
       
       try {
-        // Get or create customer
-        let stripeCustomerId = "cus_test"; // For testing, use a placeholder
+        // Get or create customer by user_id
+        const { data: existingCustomers } = await stripe.customers.list({
+          email: `${userId}@example.com`, // Using user ID as an identifier
+          limit: 1,
+        });
+        
+        let customerId;
+        if (existingCustomers && existingCustomers.length > 0) {
+          customerId = existingCustomers[0].id;
+          console.log(`[${requestId}] Using existing customer:`, customerId);
+        } else {
+          const newCustomer = await stripe.customers.create({
+            email: `${userId}@example.com`,
+            metadata: { user_id: userId },
+          });
+          customerId = newCustomer.id;
+          console.log(`[${requestId}] Created new customer:`, customerId);
+        }
         
         // Create checkout session
         const successUrl = requestData.successUrl || 'https://workout.au11no.com';
         const cancelUrl = requestData.cancelUrl || 'https://workout.au11no.com';
         
-        console.log(`[${requestId}] Creating checkout session with price:`, requestData.priceId);
+        console.log(`[${requestId}] Creating checkout session for price:`, requestData.priceId);
         
         const session = await stripe.checkout.sessions.create({
-          customer: stripeCustomerId,
+          customer: customerId,
           line_items: [
             {
               price: requestData.priceId,
@@ -149,9 +188,11 @@ serve(async (req) => {
         });
         
         console.log(`[${requestId}] Created checkout session:`, session.id);
-        console.log(`[${requestId}] Checkout URL:`, session.url);
         
-        result = { url: session.url };
+        result = { 
+          url: session.url,
+          sessionId: session.id
+        };
       } catch (stripeError) {
         console.error(`[${requestId}] Stripe error:`, stripeError);
         return new Response(
@@ -163,8 +204,43 @@ serve(async (req) => {
         );
       }
     } else if (endpoint === 'customer-portal') {
-      // Handle customer portal logic similar to checkout session
-      result = { url: 'https://billing.stripe.com/p/test' }; // Placeholder for testing
+      try {
+        // Get customer by user_id
+        const { data: customers } = await stripe.customers.list({
+          email: `${userId}@example.com`,
+          limit: 1,
+        });
+        
+        if (!customers || customers.length === 0) {
+          console.error(`[${requestId}] No Stripe customer found for user:`, userId);
+          return new Response(
+            JSON.stringify({ error: 'No subscription found for this user' }),
+            { status: 404, headers: corsHeaders }
+          );
+        }
+        
+        const customerId = customers[0].id;
+        const returnUrl = requestData.returnUrl || 'https://workout.au11no.com';
+        
+        // Create billing portal session
+        const portalSession = await stripe.billingPortal.sessions.create({
+          customer: customerId,
+          return_url: returnUrl,
+        });
+        
+        console.log(`[${requestId}] Created portal session:`, portalSession.id);
+        
+        result = { url: portalSession.url };
+      } catch (stripeError) {
+        console.error(`[${requestId}] Stripe error:`, stripeError);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Error creating customer portal session',
+            details: stripeError.message
+          }),
+          { status: 500, headers: corsHeaders }
+        );
+      }
     } else {
       console.error(`[${requestId}] Invalid endpoint: ${endpoint}`);
       return new Response(
@@ -173,7 +249,7 @@ serve(async (req) => {
       );
     }
     
-    console.log(`[${requestId}] Returning result:`, result);
+    console.log(`[${requestId}] Success response:`, result);
     return new Response(
       JSON.stringify(result),
       { status: 200, headers: corsHeaders }
@@ -183,7 +259,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: error.message || 'Unknown error occurred',
-        stack: error.stack, // Include stack trace for debugging
+        stack: error.stack,
       }),
       { status: 500, headers: corsHeaders }
     );

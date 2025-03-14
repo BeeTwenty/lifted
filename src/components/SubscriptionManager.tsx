@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +10,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { UserProfile, SubscriptionPlan } from "@/types/workout";
 import { api } from "@/api/config";
 
+// Subscription plan definitions
 const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   {
     id: "basic",
@@ -49,7 +51,7 @@ export function SubscriptionManager() {
   const [loading, setLoading] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [manageLoading, setManageLoading] = useState(false);
-  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -85,7 +87,7 @@ export function SubscriptionManager() {
   const handleCheckout = async (plan: SubscriptionPlan) => {
     try {
       setCheckoutLoading(true);
-      setCheckoutError(null);
+      setErrorMessage(null);
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -108,12 +110,14 @@ export function SubscriptionManager() {
         endpoint: "create-checkout-session"
       };
       
-      console.log("Stripe function request:", JSON.stringify(requestBody));
+      console.log("Stripe function request:", requestBody);
       
-      // Call Supabase Edge Function
+      // Call Supabase Edge Function with explicit headers
       const { data, error } = await supabase.functions.invoke('stripe', {
-        body: JSON.stringify(requestBody),
+        body: requestBody,
         headers: {
+          // Include the session token for authentication
+          Authorization: `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         }
       });
@@ -134,7 +138,7 @@ export function SubscriptionManager() {
       window.location.href = data.url;
     } catch (error: any) {
       console.error("Error creating checkout session:", error);
-      setCheckoutError(error.message);
+      setErrorMessage(error.message);
       toast({
         variant: "destructive",
         title: "Checkout Error",
@@ -162,12 +166,14 @@ export function SubscriptionManager() {
         endpoint: 'customer-portal'
       };
       
-      console.log("Customer portal request:", JSON.stringify(requestBody));
+      console.log("Customer portal request:", requestBody);
       
-      // Call Supabase Edge Function with explicit content type
+      // Call Supabase Edge Function with explicit headers
       const { data, error } = await supabase.functions.invoke('stripe', {
-        body: JSON.stringify(requestBody),
+        body: requestBody,
         headers: {
+          // Include the session token for authentication
+          Authorization: `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         }
       });
@@ -251,13 +257,13 @@ export function SubscriptionManager() {
             )}
           </div>
 
-          {checkoutError && (
+          {errorMessage && (
             <div className="rounded-md bg-destructive/15 p-4">
               <div className="flex">
                 <AlertTriangle className="h-5 w-5 text-destructive mr-2" />
                 <div>
                   <h3 className="text-sm font-medium text-destructive">Checkout Error</h3>
-                  <p className="mt-1 text-sm text-destructive/90">{checkoutError}</p>
+                  <p className="mt-1 text-sm text-destructive/90">{errorMessage}</p>
                 </div>
               </div>
             </div>
