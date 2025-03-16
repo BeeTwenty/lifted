@@ -46,20 +46,20 @@ export function AdDisplay({ onClose, fullWidth = false, adSlot = "1234567890" }:
           adContainerRef.current.appendChild(adInsElement);
           
           try {
-            // Initialize adsbygoogle as an array if it doesn't exist
-            if (!window.adsbygoogle) {
+            // Ensure the global adsbygoogle object exists
+            if (typeof window.adsbygoogle === 'undefined') {
               window.adsbygoogle = [];
             }
             
-            // Push ad configuration (not requiring a push property in the passed object)
-            window.adsbygoogle.push({} as any);
+            // Push ad configuration
+            (window.adsbygoogle as any).push({});
             console.log(`AdSense ad (slot: ${adSlot}) pushed to queue`);
             
             // Check if ad loaded after a short delay
             setTimeout(() => {
               if (adContainerRef.current) {
                 const adIns = adContainerRef.current.querySelector('ins.adsbygoogle');
-                if (!adIns || adIns.getAttribute('data-ad-status') !== 'filled') {
+                if (!adIns || adIns.dataset.adStatus !== 'filled') {
                   console.log(`Ad slot ${adSlot} not filled - showing fallback`);
                   showFallbackAd();
                 } else {
@@ -85,10 +85,14 @@ export function AdDisplay({ onClose, fullWidth = false, adSlot = "1234567890" }:
       setLoading(false);
     };
 
-    loadAd();
+    // Delay ad loading slightly to ensure DOM is ready
+    const initTimeout = setTimeout(() => {
+      loadAd();
+    }, 100);
 
     return () => {
       clearTimeout(adLoadTimeout);
+      clearTimeout(initTimeout);
     };
   }, [adSlot, loading]);
 
@@ -128,7 +132,7 @@ export function AdDisplay({ onClose, fullWidth = false, adSlot = "1234567890" }:
           fallbackAdShown ? (
             <>
               <div className="text-xs uppercase font-bold text-muted-foreground mb-1">Sponsored</div>
-              <p className="text-sm font-medium">{fallbackAds[Math.floor(Math.random() * fallbackAds.length)]}</p>
+              <p className="text-sm font-medium">{randomFallbackAd}</p>
             </>
           ) : (
             <div ref={adContainerRef} className="min-h-[100px]">
@@ -140,10 +144,3 @@ export function AdDisplay({ onClose, fullWidth = false, adSlot = "1234567890" }:
     </Card>
   );
 }
-
-const fallbackAds = [
-  "Try our premium plan for more workout features!",
-  "Check out new protein supplements at HealthStore",
-  "New workout gear available at FitnessMart",
-  "Download our partner app for nutrition tracking"
-];

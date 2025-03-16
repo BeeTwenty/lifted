@@ -46,20 +46,20 @@ export function WorkoutComplete({ playerState }: WorkoutCompleteProps) {
         
         // Execute the ad push
         try {
-          // Initialize adsbygoogle as an array if it doesn't exist
-          if (!window.adsbygoogle) {
+          // Ensure the global adsbygoogle object exists
+          if (typeof window.adsbygoogle === 'undefined') {
             window.adsbygoogle = [];
           }
           
-          // Use type assertion to satisfy TypeScript
-          window.adsbygoogle.push({} as any);
+          // Push the ad configuration
+          (window.adsbygoogle as any).push({});
           console.log('After workout AdSense ad pushed to queue');
           
           // Set a timeout to check if ad loaded, if not fallback to embedded AdDisplay
           adTimeoutRef.current = setTimeout(() => {
             if (afterWorkoutAdRef.current) {
               const adIns = afterWorkoutAdRef.current.querySelector('ins.adsbygoogle');
-              if (!adIns || adIns.getAttribute('data-ad-status') !== 'filled') {
+              if (!adIns || adIns.dataset.adStatus !== 'filled') {
                 console.log('After workout ad did not fill - switching to AdDisplay component');
                 setFallbackToAdDisplay(true);
               } else {
