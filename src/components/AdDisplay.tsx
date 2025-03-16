@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,7 +51,8 @@ export function AdDisplay({ onClose, fullWidth = false, adSlot = "1234567890" }:
               window.adsbygoogle = [];
             }
             
-            window.adsbygoogle.push({});
+            // Push ad configuration (not requiring a push property in the passed object)
+            window.adsbygoogle.push({} as any);
             console.log(`AdSense ad (slot: ${adSlot}) pushed to queue`);
             
             // Check if ad loaded after a short delay
@@ -126,7 +128,7 @@ export function AdDisplay({ onClose, fullWidth = false, adSlot = "1234567890" }:
           fallbackAdShown ? (
             <>
               <div className="text-xs uppercase font-bold text-muted-foreground mb-1">Sponsored</div>
-              <p className="text-sm font-medium">{randomFallbackAd}</p>
+              <p className="text-sm font-medium">{fallbackAds[Math.floor(Math.random() * fallbackAds.length)]}</p>
             </>
           ) : (
             <div ref={adContainerRef} className="min-h-[100px]">
@@ -138,3 +140,10 @@ export function AdDisplay({ onClose, fullWidth = false, adSlot = "1234567890" }:
     </Card>
   );
 }
+
+const fallbackAds = [
+  "Try our premium plan for more workout features!",
+  "Check out new protein supplements at HealthStore",
+  "New workout gear available at FitnessMart",
+  "Download our partner app for nutrition tracking"
+];

@@ -51,7 +51,8 @@ export function WorkoutComplete({ playerState }: WorkoutCompleteProps) {
             window.adsbygoogle = [];
           }
           
-          window.adsbygoogle.push({});
+          // Use type assertion to satisfy TypeScript
+          window.adsbygoogle.push({} as any);
           console.log('After workout AdSense ad pushed to queue');
           
           // Set a timeout to check if ad loaded, if not fallback to embedded AdDisplay
