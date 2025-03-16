@@ -15,13 +15,20 @@ export function AdDisplay({ onClose, fullWidth = false, adSlot = "1234567890" }:
   const [error, setError] = useState(false);
   const [fallbackAdShown, setFallbackAdShown] = useState(false);
   const adContainerRef = useRef<HTMLDivElement>(null);
+  const adAttemptedRef = useRef(false);
 
   useEffect(() => {
+    // Only allow one ad attempt per component lifecycle
+    if (adAttemptedRef.current) return;
+    adAttemptedRef.current = true;
+    
+    // Set a longer timeout (5 seconds) for ad loading
     const adLoadTimeout = setTimeout(() => {
       if (loading && !fallbackAdShown) {
+        console.log(`Ad load timeout for slot ${adSlot} - showing fallback`);
         showFallbackAd();
       }
-    }, 2000);
+    }, 5000);
 
     const loadAd = () => {
       try {
@@ -41,7 +48,20 @@ export function AdDisplay({ onClose, fullWidth = false, adSlot = "1234567890" }:
           try {
             (window.adsbygoogle = window.adsbygoogle || []).push({});
             console.log(`AdSense ad (slot: ${adSlot}) pushed to queue`);
-            setLoading(false);
+            
+            // Check if ad loaded after a short delay
+            setTimeout(() => {
+              if (adContainerRef.current) {
+                const adIns = adContainerRef.current.querySelector('ins.adsbygoogle');
+                if (!adIns || adIns.getAttribute('data-ad-status') !== 'filled') {
+                  console.log(`Ad slot ${adSlot} not filled - showing fallback`);
+                  showFallbackAd();
+                } else {
+                  console.log(`Ad slot ${adSlot} successfully loaded`);
+                  setLoading(false);
+                }
+              }
+            }, 2000);
           } catch (adError) {
             console.error('Error pushing ad to queue:', adError);
             showFallbackAd();
@@ -64,7 +84,7 @@ export function AdDisplay({ onClose, fullWidth = false, adSlot = "1234567890" }:
     return () => {
       clearTimeout(adLoadTimeout);
     };
-  }, [adSlot, loading, fallbackAdShown]);
+  }, [adSlot]);
 
   const fallbackAds = [
     "Try our premium plan for more workout features!",

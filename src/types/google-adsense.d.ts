@@ -1,5 +1,16 @@
 
 // Type definitions for Google AdSense
 interface Window {
-  adsbygoogle: any[];
+  adsbygoogle: {
+    push: (params: object) => void;
+    [key: string]: any;
+  }[];
+}
+
+// Extend HTMLElement to include data-ad-status attribute
+interface HTMLElement {
+  dataset: {
+    adStatus?: string;
+    [key: string]: string | undefined;
+  };
 }
