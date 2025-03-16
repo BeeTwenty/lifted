@@ -1,4 +1,2 @@
 
-interface Window {
-  adsbygoogle: any[];
-}
+// Already exists, no changes needed

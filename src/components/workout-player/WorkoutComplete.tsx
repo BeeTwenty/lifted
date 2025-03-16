@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { UseWorkoutPlayerReturn } from "@/hooks/useWorkoutPlayer";
 import { AdDisplay } from "@/components/AdDisplay";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 interface WorkoutCompleteProps {
   playerState: UseWorkoutPlayerReturn;
@@ -14,6 +14,32 @@ interface WorkoutCompleteProps {
 export function WorkoutComplete({ playerState }: WorkoutCompleteProps) {
   const { workoutNotes, setWorkoutNotes, handleComplete } = playerState;
   const [adDismissed, setAdDismissed] = useState(false);
+  const afterWorkoutAdRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (afterWorkoutAdRef.current && typeof window !== 'undefined') {
+      // Create the ins element
+      const adInsElement = document.createElement('ins');
+      adInsElement.className = 'adsbygoogle';
+      adInsElement.style.display = 'block';
+      adInsElement.setAttribute('data-ad-client', 'ca-pub-1703915401564574');
+      adInsElement.setAttribute('data-ad-slot', '5572763011');
+      adInsElement.setAttribute('data-ad-format', 'auto');
+      adInsElement.setAttribute('data-full-width-responsive', 'true');
+      
+      // Clear previous content and append new elements
+      afterWorkoutAdRef.current.innerHTML = '';
+      afterWorkoutAdRef.current.appendChild(adInsElement);
+      
+      // Execute the ad push
+      try {
+        (window.adsbygoogle = window.adsbygoogle || []).push({});
+        console.log('After workout AdSense ad pushed to queue');
+      } catch (error) {
+        console.error('Error pushing after workout ad:', error);
+      }
+    }
+  }, []);
 
   return (
     <div className="py-3 sm:py-10 text-center space-y-2 sm:space-y-4">
@@ -47,6 +73,9 @@ export function WorkoutComplete({ playerState }: WorkoutCompleteProps) {
           Finish & Save
         </Button>
       </div>
+      
+      {/* After workout AdSense ad */}
+      <div ref={afterWorkoutAdRef} className="mt-4 w-full min-h-[250px]"></div>
     </div>
   );
 }
