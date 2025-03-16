@@ -1,2 +1,5 @@
 
-// Already exists, no changes needed
+// Type definitions for Google AdSense
+interface Window {
+  adsbygoogle: any[];
+}
