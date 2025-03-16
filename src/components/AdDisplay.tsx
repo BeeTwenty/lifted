@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -46,7 +45,12 @@ export function AdDisplay({ onClose, fullWidth = false, adSlot = "1234567890" }:
           adContainerRef.current.appendChild(adInsElement);
           
           try {
-            (window.adsbygoogle = window.adsbygoogle || []).push({});
+            // Initialize adsbygoogle as an array if it doesn't exist
+            if (!window.adsbygoogle) {
+              window.adsbygoogle = [];
+            }
+            
+            window.adsbygoogle.push({});
             console.log(`AdSense ad (slot: ${adSlot}) pushed to queue`);
             
             // Check if ad loaded after a short delay
@@ -84,7 +88,7 @@ export function AdDisplay({ onClose, fullWidth = false, adSlot = "1234567890" }:
     return () => {
       clearTimeout(adLoadTimeout);
     };
-  }, [adSlot]);
+  }, [adSlot, loading]);
 
   const fallbackAds = [
     "Try our premium plan for more workout features!",

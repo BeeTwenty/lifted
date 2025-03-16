@@ -46,7 +46,12 @@ export function WorkoutComplete({ playerState }: WorkoutCompleteProps) {
         
         // Execute the ad push
         try {
-          (window.adsbygoogle = window.adsbygoogle || []).push({});
+          // Initialize adsbygoogle as an array if it doesn't exist
+          if (!window.adsbygoogle) {
+            window.adsbygoogle = [];
+          }
+          
+          window.adsbygoogle.push({});
           console.log('After workout AdSense ad pushed to queue');
           
           // Set a timeout to check if ad loaded, if not fallback to embedded AdDisplay
