@@ -59,7 +59,7 @@ export function AdDisplay({ onClose, fullWidth = false, adSlot = "1234567890" }:
             setTimeout(() => {
               if (adContainerRef.current) {
                 const adIns = adContainerRef.current.querySelector('ins.adsbygoogle');
-                if (!adIns || adIns.dataset.adStatus !== 'filled') {
+                if (!adIns || (adIns as HTMLElement).dataset.adStatus !== 'filled') {
                   console.log(`Ad slot ${adSlot} not filled - showing fallback`);
                   showFallbackAd();
                 } else {

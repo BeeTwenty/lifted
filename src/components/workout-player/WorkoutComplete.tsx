@@ -59,7 +59,7 @@ export function WorkoutComplete({ playerState }: WorkoutCompleteProps) {
           adTimeoutRef.current = setTimeout(() => {
             if (afterWorkoutAdRef.current) {
               const adIns = afterWorkoutAdRef.current.querySelector('ins.adsbygoogle');
-              if (!adIns || adIns.dataset.adStatus !== 'filled') {
+              if (!adIns || (adIns as HTMLElement).dataset.adStatus !== 'filled') {
                 console.log('After workout ad did not fill - switching to AdDisplay component');
                 setFallbackToAdDisplay(true);
               } else {
