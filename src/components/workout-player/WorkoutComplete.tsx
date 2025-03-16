@@ -5,7 +5,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { UseWorkoutPlayerReturn } from "@/hooks/useWorkoutPlayer";
 import { AdDisplay } from "@/components/AdDisplay";
-import { useState, useEffect, useRef } from "react";
+import AdsComponent from "@/components/AdsComponent";
+import { useState } from "react";
 
 interface WorkoutCompleteProps {
   playerState: UseWorkoutPlayerReturn;
@@ -14,76 +15,6 @@ interface WorkoutCompleteProps {
 export function WorkoutComplete({ playerState }: WorkoutCompleteProps) {
   const { workoutNotes, setWorkoutNotes, handleComplete } = playerState;
   const [adDismissed, setAdDismissed] = useState(false);
-  const [showAfterWorkoutAd, setShowAfterWorkoutAd] = useState(true);
-  const [adAttempted, setAdAttempted] = useState(false);
-  const [fallbackToAdDisplay, setFallbackToAdDisplay] = useState(false);
-  const afterWorkoutAdRef = useRef<HTMLDivElement>(null);
-  const adTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    // Only attempt to load the ad once
-    if (adAttempted) return;
-    setAdAttempted(true);
-    
-    const loadAfterWorkoutAd = () => {
-      if (afterWorkoutAdRef.current && typeof window !== 'undefined' && showAfterWorkoutAd) {
-        // Clear previous content
-        if (afterWorkoutAdRef.current.firstChild) {
-          afterWorkoutAdRef.current.innerHTML = '';
-        }
-        
-        // Create the ins element
-        const adInsElement = document.createElement('ins');
-        adInsElement.className = 'adsbygoogle';
-        adInsElement.style.display = 'block';
-        adInsElement.setAttribute('data-ad-client', 'ca-pub-1703915401564574');
-        adInsElement.setAttribute('data-ad-slot', '5572763011');
-        adInsElement.setAttribute('data-ad-format', 'auto');
-        adInsElement.setAttribute('data-full-width-responsive', 'true');
-        
-        // Append the element
-        afterWorkoutAdRef.current.appendChild(adInsElement);
-        
-        // Execute the ad push
-        try {
-          // Ensure the global adsbygoogle object exists
-          if (typeof window.adsbygoogle === 'undefined') {
-            window.adsbygoogle = [];
-          }
-          
-          // Push the ad configuration
-          (window.adsbygoogle as any).push({});
-          console.log('After workout AdSense ad pushed to queue');
-          
-          // Set a timeout to check if ad loaded, if not fallback to embedded AdDisplay
-          adTimeoutRef.current = setTimeout(() => {
-            if (afterWorkoutAdRef.current) {
-              const adIns = afterWorkoutAdRef.current.querySelector('ins.adsbygoogle');
-              if (!adIns || (adIns as HTMLElement).dataset.adStatus !== 'filled') {
-                console.log('After workout ad did not fill - switching to AdDisplay component');
-                setFallbackToAdDisplay(true);
-              } else {
-                console.log('After workout ad successfully loaded');
-              }
-            }
-          }, 4000); // Give ad more time to load (4 seconds)
-        } catch (error) {
-          console.error('Error pushing after workout ad:', error);
-          setFallbackToAdDisplay(true);
-        }
-      }
-    };
-    
-    // Add a small delay before loading ad to give the page time to render
-    const initTimeout = setTimeout(() => {
-      loadAfterWorkoutAd();
-    }, 500);
-    
-    return () => {
-      if (adTimeoutRef.current) clearTimeout(adTimeoutRef.current);
-      clearTimeout(initTimeout);
-    };
-  }, [adAttempted, showAfterWorkoutAd]);
 
   return (
     <div className="py-3 sm:py-10 text-center space-y-2 sm:space-y-4">
@@ -119,18 +50,8 @@ export function WorkoutComplete({ playerState }: WorkoutCompleteProps) {
       </div>
       
       {/* After workout ad section */}
-      <div className="mt-4 w-full">
-        {fallbackToAdDisplay ? (
-          <AdDisplay fullWidth adSlot="5572763011" />
-        ) : (
-          <div 
-            ref={afterWorkoutAdRef} 
-            className="w-full min-h-[250px] border border-muted rounded-md bg-muted/20 flex items-center justify-center"
-          >
-            {/* AdSense content will be injected here */}
-            <div className="text-muted-foreground text-sm animate-pulse">Loading ad...</div>
-          </div>
-        )}
+      <div className="mt-4 w-full border border-muted rounded-md bg-muted/20">
+        <AdsComponent dataAdSlot="5572763011" />
       </div>
     </div>
   );
