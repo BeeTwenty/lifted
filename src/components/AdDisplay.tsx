@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,15 +7,22 @@ import { X } from "lucide-react";
 interface AdDisplayProps {
   onClose?: () => void;
   fullWidth?: boolean;
+  adSlot?: string;
 }
 
-export function AdDisplay({ onClose, fullWidth = false }: AdDisplayProps) {
+export function AdDisplay({ onClose, fullWidth = false, adSlot = "1234567890" }: AdDisplayProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [fallbackAdShown, setFallbackAdShown] = useState(false);
   const adContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const adLoadTimeout = setTimeout(() => {
+      if (loading && !fallbackAdShown) {
+        showFallbackAd();
+      }
+    }, 2000);
+
     const loadAd = () => {
       try {
         if (adContainerRef.current && typeof window !== 'undefined') {
@@ -24,15 +32,15 @@ export function AdDisplay({ onClose, fullWidth = false }: AdDisplayProps) {
           adInsElement.className = 'adsbygoogle';
           adInsElement.style.display = 'block';
           adInsElement.setAttribute('data-ad-client', 'ca-pub-1703915401564574');
-          adInsElement.setAttribute('data-ad-slot', '1234567890');
+          adInsElement.setAttribute('data-ad-slot', adSlot);
           adInsElement.setAttribute('data-ad-format', 'auto');
           adInsElement.setAttribute('data-full-width-responsive', 'true');
           
           adContainerRef.current.appendChild(adInsElement);
           
           try {
-            ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
-            console.log('AdSense ad pushed to queue');
+            (window.adsbygoogle = window.adsbygoogle || []).push({});
+            console.log(`AdSense ad (slot: ${adSlot}) pushed to queue`);
             setLoading(false);
           } catch (adError) {
             console.error('Error pushing ad to queue:', adError);
@@ -51,18 +59,12 @@ export function AdDisplay({ onClose, fullWidth = false }: AdDisplayProps) {
       setLoading(false);
     };
 
-    const adBlockDetectionTimer = setTimeout(() => {
-      if (loading && !fallbackAdShown) {
-        showFallbackAd();
-      }
-    }, 2000);
-
     loadAd();
 
     return () => {
-      clearTimeout(adBlockDetectionTimer);
+      clearTimeout(adLoadTimeout);
     };
-  }, [loading, fallbackAdShown]);
+  }, [adSlot, loading, fallbackAdShown]);
 
   const fallbackAds = [
     "Try our premium plan for more workout features!",

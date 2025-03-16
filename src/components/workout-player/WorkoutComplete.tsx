@@ -14,10 +14,18 @@ interface WorkoutCompleteProps {
 export function WorkoutComplete({ playerState }: WorkoutCompleteProps) {
   const { workoutNotes, setWorkoutNotes, handleComplete } = playerState;
   const [adDismissed, setAdDismissed] = useState(false);
+  const [showAfterWorkoutAd, setShowAfterWorkoutAd] = useState(true);
   const afterWorkoutAdRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (afterWorkoutAdRef.current && typeof window !== 'undefined') {
+    let adTimeout: NodeJS.Timeout;
+    
+    if (afterWorkoutAdRef.current && typeof window !== 'undefined' && showAfterWorkoutAd) {
+      // Clear previous content
+      if (afterWorkoutAdRef.current.firstChild) {
+        afterWorkoutAdRef.current.innerHTML = '';
+      }
+      
       // Create the ins element
       const adInsElement = document.createElement('ins');
       adInsElement.className = 'adsbygoogle';
@@ -27,19 +35,33 @@ export function WorkoutComplete({ playerState }: WorkoutCompleteProps) {
       adInsElement.setAttribute('data-ad-format', 'auto');
       adInsElement.setAttribute('data-full-width-responsive', 'true');
       
-      // Clear previous content and append new elements
-      afterWorkoutAdRef.current.innerHTML = '';
+      // Append the element
       afterWorkoutAdRef.current.appendChild(adInsElement);
       
       // Execute the ad push
       try {
         (window.adsbygoogle = window.adsbygoogle || []).push({});
         console.log('After workout AdSense ad pushed to queue');
+        
+        // Set a timeout to check if ad loaded, if not fallback to embedded AdDisplay
+        adTimeout = setTimeout(() => {
+          if (afterWorkoutAdRef.current && 
+              (!afterWorkoutAdRef.current.firstChild || 
+               afterWorkoutAdRef.current.firstChild.childNodes.length === 0)) {
+            console.log('Ad did not load within timeout, showing fallback');
+            setShowAfterWorkoutAd(false);
+          }
+        }, 3000);
       } catch (error) {
         console.error('Error pushing after workout ad:', error);
+        setShowAfterWorkoutAd(false);
       }
     }
-  }, []);
+    
+    return () => {
+      if (adTimeout) clearTimeout(adTimeout);
+    };
+  }, [showAfterWorkoutAd]);
 
   return (
     <div className="py-3 sm:py-10 text-center space-y-2 sm:space-y-4">
@@ -75,7 +97,19 @@ export function WorkoutComplete({ playerState }: WorkoutCompleteProps) {
       </div>
       
       {/* After workout AdSense ad */}
-      <div ref={afterWorkoutAdRef} className="mt-4 w-full min-h-[250px]"></div>
+      {showAfterWorkoutAd ? (
+        <div 
+          ref={afterWorkoutAdRef} 
+          className="mt-4 w-full min-h-[250px] border border-muted rounded-md bg-muted/20"
+        ></div>
+      ) : (
+        <div className="mt-4 w-full">
+          <AdDisplay 
+            fullWidth 
+            adSlot="5572763011"
+          />
+        </div>
+      )}
     </div>
   );
 }
