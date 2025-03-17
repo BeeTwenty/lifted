@@ -1,3 +1,4 @@
+
 import { AdminAccessButton } from "@/components/AdminAccessButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,6 +44,7 @@ const Settings = () => {
   const [loading, setLoading] = useState(false);
   const [userData, setUserData] = useState<any>(null);
   const { theme, setTheme } = useTheme();
+  const [p2fEnabled, setP2fEnabled] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -67,6 +69,9 @@ const Settings = () => {
           ...data,
           email: user.email,
         });
+        
+        // Set P2F value from user data
+        setP2fEnabled(data.p2f_enabled || false);
       } catch (error: any) {
         toast({
           variant: "destructive",
@@ -141,6 +146,40 @@ const Settings = () => {
       toast({
         variant: "destructive",
         title: "Error signing out",
+        description: error.message,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle P2F toggle
+  const handleP2fToggle = async (checked: boolean) => {
+    try {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        navigate("/auth");
+        return;
+      }
+      
+      const { error } = await supabase
+        .from("profiles")
+        .update({ p2f_enabled: checked })
+        .eq("id", user.id);
+        
+      if (error) throw error;
+      
+      setP2fEnabled(checked);
+      toast({
+        title: "Settings updated",
+        description: `Push to Failure mode ${checked ? 'enabled' : 'disabled'}.`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error updating settings",
         description: error.message,
       });
     } finally {
@@ -318,6 +357,24 @@ const Settings = () => {
                   <p className="text-sm text-gray-500">
                     Select your preferred theme or use system settings.
                   </p>
+                </div>
+
+                {/* Push to Failure toggle */}
+                <div className="space-y-2 pt-4 border-t">
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col space-y-1">
+                      <span className="font-medium">Push to Failure (P2F)</span>
+                      <span className="text-sm text-gray-500">
+                        Enable to maximize muscle growth by training to muscular failure
+                      </span>
+                    </div>
+                    <Switch 
+                      id="p2f-mode" 
+                      checked={p2fEnabled}
+                      onCheckedChange={handleP2fToggle}
+                      disabled={loading}
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>
