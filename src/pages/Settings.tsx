@@ -1,4 +1,3 @@
-
 import { AdminAccessButton } from "@/components/AdminAccessButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Bell, ChevronLeft, Info, LogOut, Moon, Sun, User } from "lucide-react";
+import { Bell, ChevronLeft, DumbBell, Info, LogOut, Moon, Sun, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
@@ -45,6 +44,7 @@ const Settings = () => {
   const [userData, setUserData] = useState<any>(null);
   const { theme, setTheme } = useTheme();
   const [p2fEnabled, setP2fEnabled] = useState(false);
+  const [p2fWeight, setP2fWeight] = useState(5);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -70,8 +70,9 @@ const Settings = () => {
           email: user.email,
         });
         
-        // Set P2F value from user data
+        // Set P2F values from user data
         setP2fEnabled(data.p2f_enabled || false);
+        setP2fWeight(data.p2f_weight || 5);
       } catch (error: any) {
         toast({
           variant: "destructive",
@@ -153,7 +154,6 @@ const Settings = () => {
     }
   };
 
-  // Handle P2F toggle
   const handleP2fToggle = async (checked: boolean) => {
     try {
       setLoading(true);
@@ -175,6 +175,39 @@ const Settings = () => {
       toast({
         title: "Settings updated",
         description: `Push to Failure mode ${checked ? 'enabled' : 'disabled'}.`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error updating settings",
+        description: error.message,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleP2fWeightChange = async (weight: number) => {
+    try {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        navigate("/auth");
+        return;
+      }
+      
+      const { error } = await supabase
+        .from("profiles")
+        .update({ p2f_weight: weight })
+        .eq("id", user.id);
+        
+      if (error) throw error;
+      
+      setP2fWeight(weight);
+      toast({
+        title: "Settings updated",
+        description: `Push to Failure weight set to ${weight} kg.`,
       });
     } catch (error: any) {
       toast({
@@ -359,8 +392,7 @@ const Settings = () => {
                   </p>
                 </div>
 
-                {/* Push to Failure toggle */}
-                <div className="space-y-2 pt-4 border-t">
+                <div className="space-y-4 pt-4 border-t">
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col space-y-1">
                       <span className="font-medium">Push to Failure (P2F)</span>
@@ -375,6 +407,30 @@ const Settings = () => {
                       disabled={loading}
                     />
                   </div>
+                  
+                  {p2fEnabled && (
+                    <div className="space-y-2 pl-2 border-l-2 border-primary/20 ml-1">
+                      <div className="flex items-center justify-between">
+                        <div className="flex flex-col space-y-1">
+                          <span className="font-medium">P2F Weight Increase</span>
+                          <span className="text-sm text-gray-500">
+                            Amount of weight (kg) to add to your last set
+                          </span>
+                        </div>
+                        <div className="w-20">
+                          <Input
+                            type="number"
+                            min="0.5"
+                            step="0.5"
+                            value={p2fWeight}
+                            onChange={(e) => setP2fWeight(Number(e.target.value))}
+                            onBlur={() => handleP2fWeightChange(p2fWeight)}
+                            disabled={loading}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -435,13 +491,11 @@ const Settings = () => {
           </TabsContent>
         </Tabs>
         
-        {/* Add API Key Manager */}
         <section>
           <ApiKeyManager />
         </section>
       </div>
       
-      {/* Add the Admin Access section */}
       <div className="mt-8">
         <h2 className="text-xl font-semibold mb-4">Admin Access</h2>
         <div className="max-w-md">

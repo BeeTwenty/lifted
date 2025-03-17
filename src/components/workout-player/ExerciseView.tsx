@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ExerciseMedia } from "./ExerciseMedia";
 import { UseWorkoutPlayerReturn } from "@/hooks/useWorkoutPlayer";
+import { Badge } from "@/components/ui/badge";
 
 interface ExerciseViewProps {
   playerState: UseWorkoutPlayerReturn;
@@ -22,12 +23,15 @@ export function ExerciseView({ playerState, onClose }: ExerciseViewProps) {
     totalSets,
     editedWeight,
     isEditingWeight,
+    p2fEnabled,
+    isLastSet,
     setEditedWeight,
     setIsEditingWeight,
     updateExerciseWeight,
     startRest,
     resetWorkout,
-    formatTime
+    formatTime,
+    displayWeight
   } = playerState;
 
   return (
@@ -86,7 +90,12 @@ export function ExerciseView({ playerState, onClose }: ExerciseViewProps) {
             ) : (
               <>
                 <div className="text-sm sm:text-lg font-medium flex items-center gap-1">
-                  {currentExercise?.weight || 0}
+                  {displayWeight()}
+                  {p2fEnabled && isLastSet && (
+                    <Badge variant="outline" className="text-2xs px-1 py-0 bg-primary/10">
+                      P2F
+                    </Badge>
+                  )}
                   <Button 
                     variant="ghost" 
                     size="icon" 

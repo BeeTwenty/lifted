@@ -362,6 +362,8 @@ export type Database = {
           height: number | null
           hour_goal: number | null
           id: string
+          p2f_enabled: boolean | null
+          p2f_weight: number | null
           status: string | null
           updated_at: string
           username: string | null
@@ -376,6 +378,8 @@ export type Database = {
           height?: number | null
           hour_goal?: number | null
           id: string
+          p2f_enabled?: boolean | null
+          p2f_weight?: number | null
           status?: string | null
           updated_at?: string
           username?: string | null
@@ -390,6 +394,8 @@ export type Database = {
           height?: number | null
           hour_goal?: number | null
           id?: string
+          p2f_enabled?: boolean | null
+          p2f_weight?: number | null
           status?: string | null
           updated_at?: string
           username?: string | null

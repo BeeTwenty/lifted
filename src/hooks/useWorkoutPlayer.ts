@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { profileService } from "@/api/services/profile.service";
 
 interface Exercise {
   id: string;
@@ -36,15 +36,30 @@ export function useWorkoutPlayer(workoutId: string | null, onClose: () => void) 
   const [workoutNotes, setWorkoutNotes] = useState<string>("");
   const [editedWeight, setEditedWeight] = useState<number | null>(null);
   const [isEditingWeight, setIsEditingWeight] = useState(false);
+  const [p2fEnabled, setP2fEnabled] = useState(false);
+  const [p2fWeight, setP2fWeight] = useState(5);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   useEffect(() => {
     if (workoutId) {
       fetchWorkout(workoutId);
+      fetchP2fSettings();
       setStartTime(new Date());
     }
   }, [workoutId]);
+
+  const fetchP2fSettings = async () => {
+    try {
+      const profile = await profileService.getProfile();
+      if (profile) {
+        setP2fEnabled(profile.p2f_enabled || false);
+        setP2fWeight(profile.p2f_weight || 5);
+      }
+    } catch (error) {
+      console.error("Error fetching P2F settings:", error);
+    }
+  };
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -150,7 +165,6 @@ export function useWorkoutPlayer(workoutId: string | null, onClose: () => void) 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
       
-      // Updated to include notes
       const { error } = await supabase
         .from("completed_workouts")
         .insert({
@@ -162,17 +176,14 @@ export function useWorkoutPlayer(workoutId: string | null, onClose: () => void) 
         
       if (error) throw error;
       
-      // Also insert workout_muscles records
       const { data: exercisesData } = await supabase
         .from("exercises")
         .select("name")
         .eq("workout_id", workout.id);
         
       if (exercisesData && exercisesData.length > 0) {
-        // Get unique exercise names
         const exerciseNames = [...new Set(exercisesData.map(e => e.name))];
         
-        // Get target muscles for these exercises
         const { data: templateData } = await supabase
           .from("exercise_templates")
           .select("target_muscle")
@@ -180,10 +191,8 @@ export function useWorkoutPlayer(workoutId: string | null, onClose: () => void) 
           .not("target_muscle", "is", null);
           
         if (templateData && templateData.length > 0) {
-          // Get unique muscle names
           const muscleNames = [...new Set(templateData.map(t => t.target_muscle))];
           
-          // Insert workout_muscles records
           for (const muscleName of muscleNames) {
             if (muscleName) {
               await supabase
@@ -228,7 +237,6 @@ export function useWorkoutPlayer(workoutId: string | null, onClose: () => void) 
       
       if (error) throw error;
       
-      // Update local state
       const updatedExercises = [...workout.exercises];
       updatedExercises[currentExerciseIndex] = {
         ...updatedExercises[currentExerciseIndex],
@@ -312,6 +320,18 @@ export function useWorkoutPlayer(workoutId: string | null, onClose: () => void) 
     ? ((currentExerciseIndex / totalExercises) * 100) + 
       ((currentSetIndex / totalSets) * (100 / totalExercises))
     : 0;
+    
+  const isLastSet = currentSetIndex === (totalSets - 1);
+  
+  const displayWeight = () => {
+    if (!currentExercise || currentExercise.weight === null) return 0;
+    
+    if (p2fEnabled && isLastSet) {
+      return currentExercise.weight + p2fWeight;
+    }
+    
+    return currentExercise.weight;
+  };
 
   return {
     workout,
@@ -327,6 +347,9 @@ export function useWorkoutPlayer(workoutId: string | null, onClose: () => void) 
     workoutNotes,
     editedWeight,
     isEditingWeight,
+    p2fEnabled,
+    p2fWeight,
+    isLastSet,
     totalExercises,
     totalSets,
     handleComplete,
@@ -339,7 +362,8 @@ export function useWorkoutPlayer(workoutId: string | null, onClose: () => void) 
     formatTime,
     setWorkoutNotes,
     setEditedWeight,
-    setIsEditingWeight
+    setIsEditingWeight,
+    displayWeight
   };
 }
 
