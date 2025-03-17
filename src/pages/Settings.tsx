@@ -1,4 +1,3 @@
-
 import { AdminAccessButton } from "@/components/AdminAccessButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -71,7 +70,6 @@ const Settings = () => {
           email: user.email,
         });
         
-        // Set P2F values from user data
         setP2fEnabled(data.p2f_enabled || false);
         setP2fWeight(data.p2f_weight || 5);
       } catch (error: any) {
@@ -411,23 +409,30 @@ const Settings = () => {
                   
                   {p2fEnabled && (
                     <div className="space-y-2 pl-2 border-l-2 border-primary/20 ml-1">
-                      <div className="flex items-center justify-between">
-                        <div className="flex flex-col space-y-1">
+                      <div className="flex items-center gap-3">
+                        <div className="flex flex-col space-y-1 flex-grow">
                           <span className="font-medium">P2F Weight Increase</span>
                           <span className="text-sm text-gray-500">
                             Amount of weight (kg) to add to your last set
                           </span>
                         </div>
-                        <div className="w-20">
+                        <div className="flex items-center gap-2">
                           <Input
                             type="number"
                             min="0.5"
                             step="0.5"
                             value={p2fWeight}
                             onChange={(e) => setP2fWeight(Number(e.target.value))}
-                            onBlur={() => handleP2fWeightChange(p2fWeight)}
+                            className="w-20"
                             disabled={loading}
                           />
+                          <Button 
+                            onClick={() => handleP2fWeightChange(p2fWeight)}
+                            disabled={loading}
+                            size="sm"
+                          >
+                            <Dumbbell className="h-4 w-4 mr-1" /> Save
+                          </Button>
                         </div>
                       </div>
                     </div>
