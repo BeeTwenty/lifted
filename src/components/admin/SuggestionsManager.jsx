@@ -43,7 +43,9 @@ const SuggestionsManager = () => {
         name: suggestion.workout_name,
         media_url: updates.media_url || null,
         description: updates.description || "",
-        muscles: updates.muscles || "",
+        target_muscle: updates.muscles
+          ? updates.muscles.split(",").map((m) => m.trim()).join(", ")
+          : "",
       });
       if (error) throw error;
 
@@ -109,7 +111,7 @@ const SuggestionsManager = () => {
                         <Input
                           value={state.muscles}
                           onChange={(e) => updateForm(sugg.id, "muscles", e.target.value)}
-                          placeholder="Chest, Arms, Legs..."
+                          placeholder="Biceps, Triceps, Quads..."
                         />
                       </TableCell>
                       <TableCell>
