@@ -23,6 +23,7 @@ import { toast } from "@/components/ui/use-toast";
 
 const SuggestionsManager = () => {
   const queryClient = useQueryClient();
+  const [formState, setFormState] = useState({});
 
   const { data: suggestions = [], isLoading } = useQuery({
     queryKey: ["exerciseSuggestions"],
@@ -57,6 +58,16 @@ const SuggestionsManager = () => {
     },
   });
 
+  const updateForm = (id, field, value) => {
+    setFormState((prev) => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        [field]: value,
+      },
+    }));
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -82,31 +93,29 @@ const SuggestionsManager = () => {
               </TableHeader>
               <TableBody>
                 {suggestions.map((sugg) => {
-                  const [media_url, setMediaUrl] = useState("");
-                  const [muscles, setMuscles] = useState("");
-                  const [description, setDescription] = useState("");
+                  const state = formState[sugg.id] || { media_url: "", muscles: "", description: "" };
 
                   return (
                     <TableRow key={sugg.id}>
                       <TableCell className="font-medium">{sugg.workout_name}</TableCell>
                       <TableCell>
                         <Input
-                          value={media_url}
-                          onChange={(e) => setMediaUrl(e.target.value)}
+                          value={state.media_url}
+                          onChange={(e) => updateForm(sugg.id, "media_url", e.target.value)}
                           placeholder="https://media.example.com"
                         />
                       </TableCell>
                       <TableCell>
                         <Input
-                          value={muscles}
-                          onChange={(e) => setMuscles(e.target.value)}
+                          value={state.muscles}
+                          onChange={(e) => updateForm(sugg.id, "muscles", e.target.value)}
                           placeholder="Chest, Arms, Legs..."
                         />
                       </TableCell>
                       <TableCell>
                         <Textarea
-                          value={description}
-                          onChange={(e) => setDescription(e.target.value)}
+                          value={state.description}
+                          onChange={(e) => updateForm(sugg.id, "description", e.target.value)}
                           placeholder="Optional description..."
                         />
                       </TableCell>
@@ -115,7 +124,7 @@ const SuggestionsManager = () => {
                           onClick={() =>
                             addToTemplates.mutate({
                               suggestion: sugg,
-                              updates: { media_url, muscles, description },
+                              updates: state,
                             })
                           }
                           disabled={addToTemplates.isPending}
