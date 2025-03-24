@@ -11,7 +11,8 @@ import {
   Database, 
   ArrowLeft,
   Shield,
-  ImageOff
+  ImageOff,
+  FilePlus
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -20,6 +21,7 @@ import DatabaseManager from "@/components/admin/DatabaseManager";
 import UserManager from "@/components/admin/UserManager";
 import SettingsManager from "@/components/admin/SettingsManager";
 import MissingMediaManager from "@/components/admin/MissingMediaManager";
+import SuggestionsManager from "@/components/admin/SuggestionsManager";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -132,9 +134,9 @@ const Admin = () => {
               Missing Media
             </TabsTrigger>
             <TabsTrigger value="suggestions" className="flex items-center">
-  <FilePlus className="h-4 w-4 mr-2" />
-  Suggestions
-</TabsTrigger>
+              <FilePlus className="h-4 w-4 mr-2" />
+              Suggestions
+            </TabsTrigger>
           </TabsList>
           
           {/* Database Management Tab */}
@@ -157,8 +159,8 @@ const Admin = () => {
             <MissingMediaManager isAdmin={!!userProfile?.isAdmin} />
           </TabsContent>
           <TabsContent value="suggestions" className="space-y-4">
-  <SuggestionsManager isAdmin={!!userProfile?.isAdmin} />
-</TabsContent>
+            <SuggestionsManager isAdmin={!!userProfile?.isAdmin} />
+          </TabsContent>
         </Tabs>
       </div>
     </div>
