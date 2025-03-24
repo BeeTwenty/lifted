@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
+import { Trash } from "lucide-react";
 
 const SuggestionsManager = () => {
   const queryClient = useQueryClient();
@@ -49,7 +50,12 @@ const SuggestionsManager = () => {
       });
       if (error) throw error;
 
-      await supabase.from("exercise_suggestions").delete().eq("id", suggestion.id);
+      const { error: deleteError } = await supabase
+        .from("exercise_suggestions")
+        .delete()
+        .eq("id", suggestion.id);
+
+      if (deleteError) throw deleteError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries(["exerciseSuggestions"]);
@@ -57,6 +63,20 @@ const SuggestionsManager = () => {
     },
     onError: () => {
       toast({ title: "Failed to add exercise", variant: "destructive" });
+    },
+  });
+
+  const rejectSuggestion = useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase.from("exercise_suggestions").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["exerciseSuggestions"]);
+      toast({ title: "Suggestion rejected and deleted ❌" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete suggestion", variant: "destructive" });
     },
   });
 
@@ -90,7 +110,7 @@ const SuggestionsManager = () => {
                   <TableHead>Media URL</TableHead>
                   <TableHead>Muscles</TableHead>
                   <TableHead>Description</TableHead>
-                  <TableHead className="w-24">Action</TableHead>
+                  <TableHead className="w-36">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -121,8 +141,9 @@ const SuggestionsManager = () => {
                           placeholder="Optional description..."
                         />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="flex gap-2 items-center">
                         <Button
+                          size="sm"
                           onClick={() =>
                             addToTemplates.mutate({
                               suggestion: sugg,
@@ -132,6 +153,14 @@ const SuggestionsManager = () => {
                           disabled={addToTemplates.isPending}
                         >
                           Add
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => rejectSuggestion.mutate(sugg.id)}
+                          disabled={rejectSuggestion.isPending}
+                        >
+                          <Trash className="h-4 w-4" />
                         </Button>
                       </TableCell>
                     </TableRow>
