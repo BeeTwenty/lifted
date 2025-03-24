@@ -1,14 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/use-toast";
 
 const SuggestionsManager = () => {
   const queryClient = useQueryClient();
 
-  const { data: suggestions, isLoading } = useQuery({
+  const { data: suggestions = [], isLoading } = useQuery({
     queryKey: ["exerciseSuggestions"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -29,6 +27,7 @@ const SuggestionsManager = () => {
         muscles: suggestion.muscles,
       });
       if (error) throw error;
+
       await supabase.from("exercise_suggestions").delete().eq("id", suggestion.id);
     },
     onSuccess: () => {
@@ -40,15 +39,26 @@ const SuggestionsManager = () => {
     },
   });
 
+  const validSuggestions = suggestions.filter(
+    (s) => s.media_link && s.muscles
+  );
+
   if (isLoading) return <div>Loading suggestions...</div>;
 
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-bold">Exercise Suggestions</h2>
-      {suggestions.length === 0 ? (
+
+      {suggestions.length > 0 && validSuggestions.length < suggestions.length && (
+        <p className="text-sm text-muted-foreground italic">
+          Some suggestions were hidden because they’re missing required fields.
+        </p>
+      )}
+
+      {validSuggestions.length === 0 ? (
         <p>No suggestions yet.</p>
       ) : (
-        suggestions.map((sugg) => (
+        validSuggestions.map((sugg) => (
           <div
             key={sugg.id}
             className="border rounded p-4 flex flex-col gap-2 shadow-sm bg-white"
