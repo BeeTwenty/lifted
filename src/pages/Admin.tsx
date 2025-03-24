@@ -12,7 +12,7 @@ import {
   ArrowLeft,
   Shield,
   ImageOff,
-  FilePlus
+  Plus
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -134,7 +134,7 @@ const Admin = () => {
               Missing Media
             </TabsTrigger>
             <TabsTrigger value="suggestions" className="flex items-center">
-              <FilePlus className="h-4 w-4 mr-2" />
+              <Plus className="h-4 w-4 mr-2" />
               Suggestions
             </TabsTrigger>
           </TabsList>
