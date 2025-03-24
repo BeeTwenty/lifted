@@ -131,6 +131,10 @@ const Admin = () => {
               <ImageOff className="h-4 w-4 mr-2" />
               Missing Media
             </TabsTrigger>
+            <TabsTrigger value="suggestions" className="flex items-center">
+  <FilePlus className="h-4 w-4 mr-2" />
+  Suggestions
+</TabsTrigger>
           </TabsList>
           
           {/* Database Management Tab */}
@@ -152,6 +156,9 @@ const Admin = () => {
           <TabsContent value="missing-media" className="space-y-4">
             <MissingMediaManager isAdmin={!!userProfile?.isAdmin} />
           </TabsContent>
+          <TabsContent value="suggestions" className="space-y-4">
+  <SuggestionsManager isAdmin={!!userProfile?.isAdmin} />
+</TabsContent>
         </Tabs>
       </div>
     </div>
