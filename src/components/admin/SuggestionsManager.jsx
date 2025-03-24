@@ -38,6 +38,11 @@ const SuggestionsManager = () => {
     },
   });
 
+  const deleteSuggestion = async (id) => {
+    const { error } = await supabase.from("exercise_suggestions").delete().eq("id", id);
+    if (error) throw error;
+  };
+
   const addToTemplates = useMutation({
     mutationFn: async ({ suggestion, updates }) => {
       const { error } = await supabase.from("exercise_templates").insert({
@@ -50,12 +55,7 @@ const SuggestionsManager = () => {
       });
       if (error) throw error;
 
-      const { error: deleteError } = await supabase
-        .from("exercise_suggestions")
-        .delete()
-        .eq("id", suggestion.id);
-
-      if (deleteError) throw deleteError;
+      await deleteSuggestion(suggestion.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries(["exerciseSuggestions"]);
@@ -68,8 +68,7 @@ const SuggestionsManager = () => {
 
   const rejectSuggestion = useMutation({
     mutationFn: async (id) => {
-      const { error } = await supabase.from("exercise_suggestions").delete().eq("id", id);
-      if (error) throw error;
+      await deleteSuggestion(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries(["exerciseSuggestions"]);
